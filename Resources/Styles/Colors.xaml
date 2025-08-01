@@ -42,4 +42,23 @@
     <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+
+    <!-- ==================================================== -->
+    <!-- ===== NEW COLORS FOR THE ADVANCED CHAT UI ====== -->
+    <!-- ==================================================== -->
+
+    <!-- Main Theme Colors -->
+    <Color x:Key="PageBackgroundColor">#1E2A38</Color>
+    <Color x:Key="SidebarBackgroundColor">#233447</Color>
+
+    <!-- Text Colors -->
+    <Color x:Key="PrimaryTextColor">#F0F0F0</Color>
+    <Color x:Key="SecondaryTextColor">#A0A0A0</Color>
+    <Color x:Key="ButtonTextColor">White</Color>
+
+    <!-- Control and Accent Colors -->
+    <Color x:Key="PrimaryAccentColor">#1D9BF0</Color>
+    <!-- This was the missing key -->
+    <Color x:Key="DestructiveColor">#D9534F</Color>
+    <Color x:Key="ListItemSelectedColor">#34495E</Color>
 </ResourceDictionary>

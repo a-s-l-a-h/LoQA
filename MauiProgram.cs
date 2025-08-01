@@ -4,7 +4,7 @@ using LoQA.Services;
 using LoQA.Views;
 using Microsoft.Extensions.Logging;
 
-namespace LoQA; // Make sure your namespace matches your project
+namespace LoQA;
 
 public static class MauiProgram
 {
@@ -12,7 +12,7 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder
-            .UseMauiApp<App>() // FIX: Use the 'App' class from App.xaml.cs
+            .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -27,8 +27,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<EasyChatService>();
         builder.Services.AddSingleton<DatabaseService>();
 
-        // Register the page
-        builder.Services.AddTransient<ChatPage>();
+        // Register your pages here
+        builder.Services.AddSingleton<ChatPage>(); // Singleton for persistence
+        builder.Services.AddTransient<SettingsPage>(); // Transient is fine here
 
         return builder.Build();
     }

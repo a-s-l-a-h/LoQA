@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="LoQA.Views.SettingsPage"
+             Title="Settings"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
+    <VerticalStackLayout Padding="20">
+        <Label
+            Text="Settings will go here."
+            TextColor="{StaticResource PrimaryTextColor}"
+            FontSize="Large"
+            VerticalOptions="Center"
+            HorizontalOptions="Center" />
+        <!-- Add settings controls here in the future -->
+    </VerticalStackLayout>
+</ContentPage>
