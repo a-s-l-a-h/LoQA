@@ -2,27 +2,32 @@
 
 using SQLite;
 using System;
+using System.Collections.Generic;
 
 namespace LoQA.Models
 {
+    // Represents a single message in a conversation
+    public class ChatMessage
+    {
+        public string Role { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+    }
+
     [Table("conversations")]
     public class ChatHistory
     {
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
-        // FIX: Initialize to string.Empty to satisfy the non-nullable requirement.
-        [NotNull, Collation("NOCASE")]
-        [Unique]
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; } = "New Chat";
 
-        // FIX: Initialize to an empty JSON array string.
+        // The entire conversation history is serialized into this JSON string
         public string HistoryJson { get; set; } = "[]";
 
         public int MessageCount { get; set; }
 
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public DateTime LastModified { get; set; }
+        public DateTime LastModified { get; set; } = DateTime.UtcNow;
     }
 }

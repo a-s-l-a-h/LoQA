@@ -1,292 +1,272 @@
-#pragma warning disable CA1416 // Validate platform compatibility
+#pragma warning disable CA1416
 
+using LoQA.Models;
 using LoQA.Services;
+using System.Collections.ObjectModel;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
 
-namespace LoQA.Views;
-
-public partial class ChatPage : ContentPage
+namespace LoQA.Views
 {
-    private readonly EasyChatService _chatService;
-    private readonly StringBuilder _conversationBuilder = new();
-    private bool _isGenerating = false;
-
-    // --- No changes in the constructor or GetModelPathAsync ---
-    public ChatPage(EasyChatService chatService)
+    public partial class ChatPage : ContentPage
     {
-        InitializeComponent();
-        _chatService = chatService;
+        private readonly EasyChatService _chatService;
+        private readonly DatabaseService _databaseService;
 
-        _chatService.OnTokenReceived += OnTokenReceived;
-        TemperatureSlider.ValueChanged += OnSamplingParamsChanged;
-        MinPSlider.ValueChanged += OnSamplingParamsChanged;
-    }
+        private ChatHistory? _currentConversation;
+        private readonly ObservableCollection<ChatHistory> _conversationList = new();
 
-    private async Task<string> GetModelPathAsync()
-    {
-        const string modelFileName = "qwen.gguf";
-        string destinationPath = Path.Combine(FileSystem.AppDataDirectory, modelFileName);
+        private readonly StringBuilder _currentResponseBuilder = new();
+        private bool _isGenerating = false;
+        private bool _isSidebarVisible = true;
 
-        if (File.Exists(destinationPath))
+        public ChatPage(EasyChatService chatService, DatabaseService databaseService)
         {
-            return destinationPath;
+            InitializeComponent();
+            _chatService = chatService;
+            _databaseService = databaseService;
+
+            ConversationsListView.ItemsSource = _conversationList;
+            _chatService.OnTokenReceived += OnTokenReceived;
         }
 
-        try
+        protected override async void OnAppearing()
         {
-            MainThread.BeginInvokeOnMainThread(() =>
+            base.OnAppearing();
+            await _databaseService.InitAsync();
+            await LoadConversationsFromDb();
+        }
+
+        // =============================================================
+        // BUG FIX: Initialization logic is now wrapped in a try/finally
+        // to ensure the UI state is always reset.
+        // =============================================================
+        private async void InitializeButton_Clicked(object sender, EventArgs e)
+        {
+            if (_chatService.IsInitialized)
             {
-                StatusLabel.Text = "First launch: Copying model to local storage...";
-            });
-
-            using var stream = await FileSystem.OpenAppPackageFileAsync(modelFileName);
-            using var destinationStream = File.OpenWrite(destinationPath);
-            await stream.CopyToAsync(destinationStream);
-
-            return destinationPath;
-        }
-        catch (Exception ex)
-        {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                StatusLabel.Text = "Error copying model.";
-                _conversationBuilder.Append($"\nFATAL ERROR: Could not copy model file: {ex.Message}");
-                ConversationLabel.Text = _conversationBuilder.ToString();
-            });
-            return string.Empty;
-        }
-    }
-
-    // --- No changes in InitializeButton_Clicked, OnTokenReceived, etc. ---
-    private async void InitializeButton_Clicked(object sender, EventArgs e)
-    {
-        if (_chatService.IsInitialized)
-        {
-            _chatService.Dispose(); // Re-initializing
-        }
-
-        SetInitializingState(true);
-
-        string modelPath = await GetModelPathAsync();
-        if (string.IsNullOrEmpty(modelPath))
-        {
-            SetInitializingState(false);
-            return;
-        }
-
-        var modelParams = EasyChatService.GetDefaultModelParams();
-        var ctxParams = EasyChatService.GetDefaultContextParams();
-
-        modelParams.n_gpu_layers = int.TryParse(GpuLayersEntry.Text, out var gpu) ? gpu : 0;
-        ctxParams.n_ctx = int.TryParse(ContextSizeEntry.Text, out var ctx) ? ctx : 4096;
-
-        bool success = await _chatService.InitializeAsync(modelPath, modelParams, ctxParams);
-
-        if (success)
-        {
-            UpdateSamplingParameters();
-            _conversationBuilder.Clear();
-            _conversationBuilder.Append("Model initialized successfully. You can start chatting.");
-            ConversationLabel.Text = _conversationBuilder.ToString();
-            SetReadyState();
-        }
-        else
-        {
-            StatusLabel.Text = "Initialization failed. Check logs.";
-            _conversationBuilder.Append("\nERROR: Could not initialize model.");
-            ConversationLabel.Text = _conversationBuilder.ToString();
-        }
-
-        SetInitializingState(false);
-    }
-
-    private void OnTokenReceived(string token)
-    {
-        MainThread.BeginInvokeOnMainThread(async () =>
-        {
-            _conversationBuilder.Append(token);
-            ConversationLabel.Text = _conversationBuilder.ToString();
-            await Task.Delay(50);
-            await ChatScrollView.ScrollToAsync(0, ChatScrollView.ContentSize.Height, true);
-        });
-    }
-
-    private async void SendButton_Clicked(object sender, EventArgs e)
-    {
-        if (_isGenerating || string.IsNullOrWhiteSpace(PromptEditor.Text))
-            return;
-
-        string prompt = PromptEditor.Text.Trim();
-        _conversationBuilder.Append($"\n\n**You:**\n{prompt}\n\n**Assistant:**\n");
-        ConversationLabel.Text = _conversationBuilder.ToString();
-        PromptEditor.Text = string.Empty;
-
-        SetGeneratingState(true);
-
-        try
-        {
-            await Task.Run(() => _chatService.Generate(prompt));
-        }
-        catch (Exception ex)
-        {
-            OnTokenReceived($"\nERROR: An exception occurred: {ex.Message}");
-        }
-        finally
-        {
-            SetGeneratingState(false);
-        }
-    }
-
-    private void ToggleSettingsButton_Clicked(object sender, EventArgs e)
-    {
-        SettingsScrollView.IsVisible = !SettingsScrollView.IsVisible;
-        ToggleSettingsButton.Text = SettingsScrollView.IsVisible ? "Hide Settings" : "Show Settings";
-    }
-
-    private void OnSamplingParamsChanged(object? sender, ValueChangedEventArgs e)
-    {
-        if (_chatService.IsInitialized)
-        {
-            UpdateSamplingParameters();
-            var currentParams = _chatService.GetCurrentSamplingParams();
-            StatusLabel.Text = $"Ready. Temp: {currentParams.temperature:F2}, MinP: {currentParams.min_p:F2}";
-        }
-    }
-
-    private void UpdateSamplingParameters()
-    {
-        if (!_chatService.IsInitialized) return;
-
-        var newParams = _chatService.GetCurrentSamplingParams();
-        newParams.temperature = (float)TemperatureSlider.Value;
-        newParams.min_p = (float)MinPSlider.Value;
-        newParams.seed = int.TryParse(SeedEntry.Text, out var seed) ? seed : -1;
-
-        _chatService.UpdateSamplingParams(newParams);
-    }
-
-    #region Session & History (UPDATED)
-    // UPDATED: Now saves both the memory state and the token history.
-    private async void SaveSessionButton_Clicked(object sender, EventArgs e)
-    {
-        var sessionData = _chatService.ExportSessionState();
-        var tokenData = _chatService.ExportTokenHistory(); // Export tokens as int[]
-
-        if (sessionData == null || tokenData == null)
-        {
-            await DisplayAlert("Error", "Failed to export session state or token history.", "OK");
-            return;
-        }
-
-        try
-        {
-            string sessionFile = Path.Combine(FileSystem.CacheDirectory, "chat_session.state");
-            string tokensFile = Path.Combine(FileSystem.CacheDirectory, "chat_tokens.dat");
-
-            await File.WriteAllBytesAsync(sessionFile, sessionData);
-
-            // Convert int[] to byte[] for saving
-            byte[] tokenBytes = new byte[tokenData.Length * sizeof(int)];
-            Buffer.BlockCopy(tokenData, 0, tokenBytes, 0, tokenBytes.Length);
-            await File.WriteAllBytesAsync(tokensFile, tokenBytes);
-
-            await DisplayAlert("Success", $"Session saved successfully to cache.", "OK");
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlert("Error", $"Save failed: {ex.Message}", "OK");
-        }
-    }
-
-    // UPDATED: Now loads both files and passes both to the import function.
-    private async void LoadSessionButton_Clicked(object sender, EventArgs e)
-    {
-        try
-        {
-            string sessionFile = Path.Combine(FileSystem.CacheDirectory, "chat_session.state");
-            string tokensFile = Path.Combine(FileSystem.CacheDirectory, "chat_tokens.dat");
-
-            if (!File.Exists(sessionFile) || !File.Exists(tokensFile))
-            {
-                await DisplayAlert("Not Found", "Session state or token file not found.", "OK");
+                await DisplayAlert("Initialized", "The model is already running.", "OK");
                 return;
             }
 
-            // Read both files
-            var sessionData = await File.ReadAllBytesAsync(sessionFile);
-            var tokenBytes = await File.ReadAllBytesAsync(tokensFile);
-
-            // Convert byte[] back to int[] for tokens
-            int[] tokenData = new int[tokenBytes.Length / sizeof(int)];
-            Buffer.BlockCopy(tokenBytes, 0, tokenData, 0, tokenBytes.Length);
-
-            // This is the line that caused the error. Now it passes both required arguments.
-            if (_chatService.ImportSessionState(sessionData, tokenData))
+            SetInitializingState(true);
+            try
             {
-                _conversationBuilder.Clear().Append("Session loaded successfully. NOTE: The visual chat history is not restored from session, only the model's internal memory. You can continue the conversation.");
-                ConversationLabel.Text = _conversationBuilder.ToString();
-                await DisplayAlert("Success", "Session loaded.", "OK");
+                string modelPath = await GetModelPathAsync();
+                if (string.IsNullOrEmpty(modelPath)) return;
+
+                var modelParams = EasyChatService.GetDefaultModelParams();
+                var ctxParams = EasyChatService.GetDefaultContextParams();
+                modelParams.n_gpu_layers = 50;
+                ctxParams.n_ctx = 4096;
+
+                bool success = await _chatService.InitializeAsync(modelPath, modelParams, ctxParams);
+
+                if (success)
+                {
+                    SetReadyState();
+                    if (_conversationList.Any())
+                    {
+                        ConversationsListView.SelectedItem = _conversationList.First();
+                    }
+                    else
+                    {
+                        NewChatButton_Clicked(this, EventArgs.Empty);
+                    }
+                }
+                else
+                {
+                    StatusLabel.Text = "Initialization failed. See logs.";
+                    await DisplayAlert("Error", "Failed to initialize the LLaMA model.", "OK");
+                }
+            }
+            finally
+            {
+                // This will run whether initialization succeeds or fails, unlocking the UI.
+                SetInitializingState(false);
+            }
+        }
+
+        // --- Other methods remain largely the same, but are included for completeness ---
+
+        private void OnTokenReceived(string token)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _currentResponseBuilder.Append(token);
+                // Directly append to the editor for real-time feel
+                ConversationEditor.Text += token;
+            });
+        }
+
+        private async Task LoadConversationsFromDb()
+        {
+            var conversations = await _databaseService.ListConversationsAsync();
+            _conversationList.Clear();
+            foreach (var convo in conversations) _conversationList.Add(convo);
+        }
+
+        private async void ConversationsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.CurrentSelection.FirstOrDefault() is not ChatHistory selectedConversation) return;
+            if (selectedConversation.Id == _currentConversation?.Id) return;
+            await LoadConversation(selectedConversation);
+        }
+
+        private async Task LoadConversation(ChatHistory conversation)
+        {
+            _currentConversation = conversation;
+            _chatService.ClearConversation();
+            var history = JsonSerializer.Deserialize<List<ChatMessage>>(conversation.HistoryJson) ?? new List<ChatMessage>();
+            foreach (var message in history) _chatService.AddHistoryMessage(message.Role, message.Content);
+            RenderConversation();
+            StatusLabel.Text = $"Active: {conversation.Name}";
+        }
+
+        private void NewChatButton_Clicked(object sender, EventArgs e)
+        {
+            ConversationsListView.SelectedItem = null;
+            _currentConversation = null;
+            _chatService.ClearConversation();
+            ConversationEditor.Text = "New chat session started. Type your message below.";
+            StatusLabel.Text = "New Chat";
+            PromptEditor.Focus();
+        }
+
+        private async void SendButton_Clicked(object sender, EventArgs e)
+        {
+            if (_isGenerating || string.IsNullOrWhiteSpace(PromptEditor.Text)) return;
+
+            string prompt = PromptEditor.Text.Trim();
+            PromptEditor.Text = string.Empty;
+
+            SetGeneratingState(true);
+
+            List<ChatMessage> history;
+            bool isNewChat = _currentConversation == null;
+
+            if (isNewChat)
+            {
+                _currentConversation = new ChatHistory { Name = prompt.Length > 40 ? prompt[..40] + "..." : prompt };
+                history = new List<ChatMessage>();
             }
             else
             {
-                await DisplayAlert("Error", $"Failed to import session: {_chatService.GetLastError()}", "OK");
+                history = JsonSerializer.Deserialize<List<ChatMessage>>(_currentConversation.HistoryJson) ?? new List<ChatMessage>();
+            }
+
+            history.Add(new ChatMessage { Role = "user", Content = prompt });
+            _currentConversation.HistoryJson = JsonSerializer.Serialize(history); // Save user prompt immediately
+            RenderConversation(); // Show user prompt immediately
+
+            _currentResponseBuilder.Clear();
+
+            try
+            {
+                _chatService.AddHistoryMessage("user", prompt);
+                await Task.Run(() => _chatService.Generate(prompt));
+
+                history.Add(new ChatMessage { Role = "assistant", Content = _currentResponseBuilder.ToString().Trim() });
+                _currentConversation.HistoryJson = JsonSerializer.Serialize(history);
+                _currentConversation.MessageCount = history.Count;
+
+                await _databaseService.SaveConversationAsync(_currentConversation);
+                UpdateConversationInSidebar(_currentConversation, isNewChat);
+            }
+            finally
+            {
+                SetGeneratingState(false);
+                RenderConversation(); // Final render
             }
         }
-        catch (Exception ex)
+
+        private void UpdateConversationInSidebar(ChatHistory updatedConversation, bool isNew)
         {
-            await DisplayAlert("Error", $"Load failed: {ex.Message}", "OK");
+            if (!isNew)
+            {
+                var existing = _conversationList.FirstOrDefault(c => c.Id == updatedConversation.Id);
+                if (existing != null) _conversationList.Remove(existing);
+            }
+            _conversationList.Insert(0, updatedConversation);
+            ConversationsListView.SelectedItem = updatedConversation;
         }
-    }
 
-    private void ClearHistoryButton_Clicked(object sender, EventArgs e)
-    {
-        _chatService.ClearConversation();
-        _conversationBuilder.Clear().Append("Chat history cleared.");
-        ConversationLabel.Text = _conversationBuilder.ToString();
-        var p = _chatService.GetCurrentSamplingParams();
-        StatusLabel.Text = $"History Cleared. Temp: {p.temperature:F2}, MinP: {p.min_p:F2}";
-    }
-    #endregion
+        private async void DeleteConversation_Invoked(object? sender, EventArgs e)
+        {
+            if ((sender as SwipeItem)?.CommandParameter is not ChatHistory convToDelete) return;
+            await _databaseService.DeleteConversationAsync(convToDelete.Id);
+            _conversationList.Remove(convToDelete);
+            if (_currentConversation?.Id == convToDelete.Id) NewChatButton_Clicked(this, EventArgs.Empty);
+        }
 
-    // --- No changes in UI State Management or OnDisappearing ---
-    #region UI State Management
-    private void SetInitializingState(bool isInitializing)
-    {
-        BusyIndicator.IsRunning = isInitializing;
-        InitializeButton.IsEnabled = !isInitializing;
-        StatusLabel.Text = isInitializing ? "Initializing model..." : "Please initialize the model.";
-    }
+        private void RenderConversation()
+        {
+            if (_currentConversation == null) return;
+            var history = JsonSerializer.Deserialize<List<ChatMessage>>(_currentConversation.HistoryJson) ?? new List<ChatMessage>();
+            var sb = new StringBuilder();
+            foreach (var msg in history)
+            {
+                sb.AppendLine($"**{(msg.Role == "user" ? "You" : "Assistant")}:**");
+                sb.AppendLine(msg.Content);
+                sb.AppendLine();
+            }
+            ConversationEditor.Text = sb.ToString();
+        }
 
-    private void SetReadyState()
-    {
-        var p = _chatService.GetCurrentSamplingParams();
-        StatusLabel.Text = $"Ready. Temp: {p.temperature:F2}, MinP: {p.min_p:F2}";
-        PromptEditor.IsEnabled = true;
-        SendButton.IsEnabled = true;
-        SaveSessionButton.IsEnabled = true;
-        LoadSessionButton.IsEnabled = true;
+        private void SetInitializingState(bool isInitializing)
+        {
+            StatusLabel.Text = isInitializing ? "Initializing model..." : "Please initialize the model.";
+            BusyIndicator.IsRunning = isInitializing;
+            InitializeButton.IsEnabled = !isInitializing;
+        }
 
-        ClearHistoryButton.IsEnabled = true;
-        InitializeButton.Text = "Reload Model";
-    }
+        private void SetReadyState()
+        {
+            StatusLabel.Text = "Ready";
+            InputGrid.IsEnabled = true;
+            InitializeButton.IsEnabled = false;
+            InitializeButton.Text = "Initialized";
+        }
 
-    private void SetGeneratingState(bool isGenerating)
-    {
-        _isGenerating = isGenerating;
-        BusyIndicator.IsRunning = isGenerating;
-        SendButton.IsEnabled = !isGenerating;
-        InitializeButton.IsEnabled = !isGenerating;
-        StatusLabel.Text = isGenerating ? "Generating..." : "Ready.";
-        if (!isGenerating) SetReadyState();
-    }
-    #endregion
+        private void SetGeneratingState(bool isGenerating)
+        {
+            _isGenerating = isGenerating;
+            BusyIndicator.IsRunning = isGenerating;
+            NewChatButton.IsEnabled = !isGenerating;
+            ConversationsListView.IsEnabled = !isGenerating;
+            if (isGenerating) StatusLabel.Text = "Generating...";
+        }
 
-    protected override void OnDisappearing()
-    {
-        base.OnDisappearing();
-        _chatService.OnTokenReceived -= OnTokenReceived;
-        TemperatureSlider.ValueChanged -= OnSamplingParamsChanged;
-        MinPSlider.ValueChanged -= OnSamplingParamsChanged;
+        private void ToggleSidebarButton_Clicked(object sender, EventArgs e)
+        {
+            _isSidebarVisible = !_isSidebarVisible;
+            SidebarColumn.Width = _isSidebarVisible ? new GridLength(300) : new GridLength(0);
+        }
+
+        private async Task<string> GetModelPathAsync()
+        {
+            const string modelFileName = "qwen.gguf";
+            string destinationPath = Path.Combine(FileSystem.AppDataDirectory, modelFileName);
+            if (File.Exists(destinationPath)) return destinationPath;
+            try
+            {
+                await MainThread.InvokeOnMainThreadAsync(() => { StatusLabel.Text = "First launch: Copying model..."; });
+                using var stream = await FileSystem.OpenAppPackageFileAsync(modelFileName);
+                using var destinationStream = File.OpenWrite(destinationPath);
+                await stream.CopyToAsync(destinationStream);
+                return destinationPath;
+            }
+            catch (Exception ex)
+            {
+                await MainThread.InvokeOnMainThreadAsync(() => { StatusLabel.Text = $"Error copying model: {ex.Message}"; });
+                return string.Empty;
+            }
+        }
+
+        protected override void OnDisappearing()
+        {
+            base.OnDisappearing();
+            _chatService.OnTokenReceived -= OnTokenReceived;
+        }
     }
 }

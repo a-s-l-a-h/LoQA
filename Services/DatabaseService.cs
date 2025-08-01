@@ -10,9 +10,9 @@ namespace LoQA.Services
 {
     public class DatabaseService
     {
-        // FIX: Make the connection field nullable to handle lazy initialization.
         private SQLiteAsyncConnection? _connection;
 
+        // Establishes connection and creates the table if it doesn't exist.
         public async Task InitAsync()
         {
             if (_connection != null)
@@ -23,31 +23,38 @@ namespace LoQA.Services
             await _connection.CreateTableAsync<ChatHistory>();
         }
 
+        // Retrieves a list of all conversations, ordered by the most recently modified.
         public async Task<List<ChatHistory>> ListConversationsAsync()
         {
             await InitAsync();
             return await _connection!.Table<ChatHistory>().OrderByDescending(ch => ch.LastModified).ToListAsync();
         }
 
-        public async Task<ChatHistory?> LoadConversationAsync(int id)
+        // Loads a single conversation by its unique ID.
+        public async Task<ChatHistory?> GetConversationAsync(int id)
         {
             await InitAsync();
             return await _connection!.Table<ChatHistory>().Where(ch => ch.Id == id).FirstOrDefaultAsync();
         }
 
+        // Saves a conversation (either by inserting a new one or updating an existing one).
         public async Task<int> SaveConversationAsync(ChatHistory chat)
         {
             await InitAsync();
+            chat.LastModified = DateTime.UtcNow; // Always update the timestamp
+
             if (chat.Id != 0)
             {
                 return await _connection!.UpdateAsync(chat);
             }
             else
             {
+                chat.CreatedAt = DateTime.UtcNow;
                 return await _connection!.InsertAsync(chat);
             }
         }
 
+        // Deletes a conversation from the database by its ID.
         public async Task<int> DeleteConversationAsync(int id)
         {
             await InitAsync();
