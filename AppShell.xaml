@@ -7,11 +7,11 @@
     Shell.FlyoutBehavior="Disabled"
     Title="LoQA">
 
-    <!-- The Chat Page is now the main and only content -->
+    <!-- The Home Page is now the main and only content -->
     <ShellContent
         Title="EasyChat"
-        ContentTemplate="{DataTemplate views:ChatPage}"
-        Route="ChatPage" />
+        ContentTemplate="{DataTemplate views:HomePage}"
+        Route="HomePage" />
 
     <!-- Define the route for the settings page so we can navigate to it -->
     <ShellContent

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:LoQA.Models"
+             x:Class="LoQA.Views.ChatContentView">
+
+    <Grid RowDefinitions="Auto, *, Auto" Padding="0, 10, 10, 10" ColumnSpacing="10">
+
+        <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="5" Margin="0,0,0,5">
+            <Button x:Name="ToggleSidebarButton" Text="☰" FontAttributes="Bold" WidthRequest="50" Clicked="ToggleSidebarButton_Clicked" />
+            <Label Grid.Column="1" x:Name="StatusLabel" Text="Please initialize the model." TextColor="{StaticResource SecondaryTextColor}" HorizontalTextAlignment="Center" VerticalTextAlignment="Center"/>
+            <Button Grid.Column="2" x:Name="InitializeButton" Text="Initialize Model" Clicked="InitializeButton_Clicked" HorizontalOptions="End"/>
+        </Grid>
+
+        <CollectionView Grid.Row="1" 
+                        x:Name="ChatMessagesView" 
+                        Margin="5,0" 
+                        ItemsSource="{Binding CurrentMessages}"
+                        ItemsUpdatingScrollMode="KeepLastItemInView"
+                        Scrolled="ChatMessagesView_Scrolled">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:ChatMessageViewModel">
+                    <Grid Margin="5" HorizontalOptions="{Binding HorizontalAlignment}">
+                        <Border Padding="10"
+                                BackgroundColor="{Binding BackgroundColor}"
+                                StrokeThickness="0"
+                                MaximumWidthRequest="400">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="15" />
+                            </Border.StrokeShape>
+                            <Label Text="{Binding Content}"
+                                   TextColor="{Binding TextColor}"
+                                   LineBreakMode="WordWrap"/>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="5,10,0,0" IsEnabled="False" x:Name="InputGrid">
+            <Editor Grid.Column="0"
+                    x:Name="PromptEditor"
+                    Placeholder="Enter your prompt here..."
+                    AutoSize="TextChanges"
+                    TextColor="{StaticResource PrimaryTextColor}"
+                    PlaceholderColor="{StaticResource SecondaryTextColor}"/>
+
+            <Button Grid.Column="1"
+                    x:Name="SendButton"
+                    Text="➤"
+                    IsVisible="True"
+                    Clicked="SendButton_Clicked"
+                    Style="{StaticResource CircleButton}"/>
+            <Button Grid.Column="1"
+                    x:Name="StopButton"
+                    Text="■"
+                    IsVisible="False"
+                    Clicked="StopButton_Clicked"
+                    Style="{StaticResource CircleButton}"
+                    BackgroundColor="{StaticResource DestructiveColor}"/>
+        </Grid>
+
+        <ActivityIndicator Grid.Row="1" 
+                           x:Name="BusyIndicator" 
+                           IsRunning="False" 
+                           HorizontalOptions="Center" 
+                           VerticalOptions="Center" 
+                           Color="{StaticResource PrimaryAccentColor}" />
+    </Grid>
+</ContentView>
