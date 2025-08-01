@@ -1,0 +1,252 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
+		<!-- <TargetFrameworks>$(TargetFrameworks);net9.0-tizen</TargetFrameworks> -->
+
+		<!-- Note for MacCatalyst:
+		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
+		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
+		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
+		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
+		<!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+
+		<OutputType>Exe</OutputType>
+		<RootNamespace>LoQA</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<!-- Display name -->
+		<ApplicationTitle>Lō-QA</ApplicationTitle>
+
+		<!-- App Identifier -->
+		<ApplicationId>com.companyname.lqa</ApplicationId>
+
+		<!-- Versions -->
+		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+		<WindowsPackageType>None</WindowsPackageType>
+
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- App Icon -->
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+
+		<!-- Splash Screen -->
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+
+		<!-- Images -->
+		<MauiImage Include="Resources\Images\*" />
+		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+
+		<!-- Custom Fonts -->
+		<MauiFont Include="Resources\Fonts\*" />
+
+		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+	</ItemGroup>
+	<!-- ===================================================================== -->
+	<!-- Native Library References                                             -->
+	<!-- ===================================================================== -->
+
+	<!-- ANDROID NATIVE LIBRARIES -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<!-- ARM64-V8A -->
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libomp.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libomp.so')">
+			<Link>lib\arm64-v8a\libomp.so</Link>
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libchat.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libchat.so')">
+			<Link>lib\arm64-v8a\libchat.so</Link>
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libllama.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libllama.so')">
+			<Link>lib\arm64-v8a\libllama.so</Link>
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libggml.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libggml.so')">
+			<Link>lib\arm64-v8a\libggml.so</Link>
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libggml-base.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libggml-base.so')">
+			<Link>lib\arm64-v8a\libggml-base.so</Link>
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libggml-cpu.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libggml-cpu.so')">
+			<Link>lib\arm64-v8a\libggml-cpu.so</Link>
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		<!-- ADD THIS LINE FOR LIBOMP.SO -->
+
+		<!-- If you have liblua54.so for arm64-v8a and it's needed by chat/llama, include it too.
+		     If it's only for NLua's C# scripting, it's typically handled by NLua's package.
+		     But if your native `chat` code ALSO uses Lua, then you might need to explicitly package it:
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\liblua54.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\liblua54.so')">
+			<Link>lib\arm64-v8a\liblua54.so</Link>
+			<Abi>arm64-v8a</Abi>
+		</AndroidNativeLibrary>
+		-->
+
+		<!-- ARMEABI-V7A -->
+		<!-- IMPORTANT: Only uncomment/include these if you HAVE these files compiled for armeabi-v7a -->
+		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libchat.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libchat.so')">
+			<Link>lib\armeabi-v7a\libchat.so</Link>
+			<Abi>armeabi-v7a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libllama.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libllama.so')">
+			<Link>lib\armeabi-v7a\libllama.so</Link>
+			<Abi>armeabi-v7a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libggml.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libggml.so')">
+			<Link>lib\armeabi-v7a\libggml.so</Link>
+			<Abi>armeabi-v7a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libggml-base.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libggml-base.so')">
+			<Link>lib\armeabi-v7a\libggml-base.so</Link>
+			<Abi>armeabi-v7a</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libggml-cpu.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libggml-cpu.so')">
+			<Link>lib\armeabi-v7a\libggml-cpu.so</Link>
+			<Abi>armeabi-v7a</Abi>
+		</AndroidNativeLibrary>
+		<!--
+		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\liblua54.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\liblua54.so')">
+			<Link>lib\armeabi-v7a\liblua54.so</Link>
+			<Abi>armeabi-v7a</Abi>
+		</AndroidNativeLibrary>
+		-->
+
+		<!-- X86_64 (for emulators) -->
+		<!-- IMPORTANT: Only uncomment/include these if you HAVE these files compiled for x86_64 -->
+		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libchat.so" Condition="Exists('Platforms\Android\libs\x86_64\libchat.so')">
+			<Link>lib\x86_64\libchat.so</Link>
+			<Abi>x86_64</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libllama.so" Condition="Exists('Platforms\Android\libs\x86_64\libllama.so')">
+			<Link>lib\x86_64\libllama.so</Link>
+			<Abi>x86_64</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libggml.so" Condition="Exists('Platforms\Android\libs\x86_64\libggml.so')">
+			<Link>lib\x86_64\libggml.so</Link>
+			<Abi>x86_64</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libggml-base.so" Condition="Exists('Platforms\Android\libs\x86_64\libggml-base.so')">
+			<Link>lib\x86_64\libggml-base.so</Link>
+			<Abi>x86_64</Abi>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libggml-cpu.so" Condition="Exists('Platforms\Android\libs\x86_64\libggml-cpu.so')">
+			<Link>lib\x86_64\libggml-cpu.so</Link>
+			<Abi>x86_64</Abi>
+		</AndroidNativeLibrary>
+		<!--
+		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\liblua54.so" Condition="Exists('Platforms\Android\libs\x86_64\liblua54.so')">
+			<Link>lib\x86_64\liblua54.so</Link>
+			<Abi>x86_64</Abi>
+		</AndroidNativeLibrary>
+		-->
+	</ItemGroup>
+
+
+	<!-- IOS NATIVE LIBRARIES (Placeholder - Update when you have iOS libs) -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+		<!-- Example for iOS (replace with actual files and Kind - Static or Dynamic) -->
+		<!--
+		<NativeFileReference Include="Platforms\iOS\libs\libchat.a" Kind="Static" Condition="Exists('Platforms\iOS\libs\libchat.a')" />
+		<NativeFileReference Include="Platforms\iOS\libs\libllama.a" Kind="Static" Condition="Exists('Platforms\iOS\libs\libllama.a')" />
+		-->
+	</ItemGroup>
+
+	<!-- MACCATALYST NATIVE LIBRARIES (Placeholder - Update when you have MacCatalyst libs) -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+		<!-- Example for MacCatalyst (usually .dylib) -->
+		<!--
+		<NativeFileReference Include="Platforms\MacCatalyst\libs\libchat.dylib" Kind="Dynamic" Condition="Exists('Platforms\MacCatalyst\libs\libchat.dylib')" />
+		<NativeFileReference Include="Platforms\MacCatalyst\libs\libllama.dylib" Kind="Dynamic" Condition="Exists('Platforms\MacCatalyst\libs\libllama.dylib')" />
+		-->
+	</ItemGroup>
+
+	<!-- WINDOWS NATIVE LIBRARIES -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<!-- Assuming x64 for Windows; add x86 if needed and files exist -->
+		<Content Include="Platforms\Windows\libs\x64\chat.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\chat.dll')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>chat.dll</Link>
+		</Content>
+		<Content Include="Platforms\Windows\libs\x64\llama.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\llama.dll')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>llama.dll</Link>
+		</Content>
+		<Content Include="Platforms\Windows\libs\x64\ggml.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\ggml.dll')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>ggml.dll</Link>
+		</Content>
+		<Content Include="Platforms\Windows\libs\x64\ggml-base.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\ggml-base.dll')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>ggml-base.dll</Link>
+		</Content>
+		<Content Include="Platforms\Windows\libs\x64\ggml-cpu.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\ggml-cpu.dll')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>ggml-cpu.dll</Link>
+		</Content>
+		<!-- Add x86 versions if you have them and need to support x86 Windows -->
+		<!--
+		<Content Include="Platforms\Windows\libs\x86\chat.dll" Condition="$(RuntimeIdentifier.Contains('x86')) AND EXISTS('Platforms\Windows\libs\x86\chat.dll')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>chat.dll</Link>
+		</Content>
+		... etc for other x86 DLLs ...
+		-->
+	</ItemGroup>
+
+	<!-- TIZEN NATIVE LIBRARIES (Placeholder) -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">
+		<!--
+		<SharedLibrary Include="Platforms\Tizen\libs\libchat.so" Condition="Exists('Platforms\Tizen\libs\libchat.so')" />
+		-->
+	</ItemGroup>
+	<!-- ===================================================================== -->
+
+	<ItemGroup>
+	  <MauiXaml Update="Views\ChatPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\HomePage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Platforms\Windows\libs\x64\" />
+	</ItemGroup>
+
+
+	<!-- Add this PropertyGroup to handle large apps -->
+	<PropertyGroup>
+		<!-- Enable XAML compiled bindings (fixes your XC0025 warnings) -->
+		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+	</PropertyGroup>
+	<PropertyGroup>
+		<EnableLongPath>true</EnableLongPath>
+	</PropertyGroup>
+
+
+</Project>

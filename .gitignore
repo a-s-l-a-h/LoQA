@@ -1,0 +1,146 @@
+﻿# .NET MAUI .gitignore file
+# This file is based on the standard Visual Studio and .NET templates.
+
+# --- Visual Studio ---
+# Ignore the .vs folder, which contains user-specific solution settings like
+# open documents, window layouts, and breakpoints.
+.vs/
+fullcode/
+
+# User-specific settings files
+*.suo
+*.user
+*.sln.dotsettings
+
+# --- .NET & MAUI Build Artifacts ---
+# Ignore the main build output folders. These are regenerated on every build.
+[Bb]in/
+[Oo]bj/
+
+# --- Other Generated Files & Caches ---
+# Log files
+*.log
+*.tlog
+
+# Test results
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet packages folder (for older project styles)
+/packages
+
+# NuGet package Symbol files
+*.nupkg
+*.snupkg
+
+# --- OS-generated files ---
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
+# --- IDE-specific files (optional, but good practice) ---
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# --- Publish Folders ---
+# Ignore publish output folders, which can be configured in the .csproj
+[Pp]ublish/
+[Pp]ublish[Oo]utput/
+
+# Ignore all .gguf files
+*.gguf
+
+*.so
+*.dll
+*.js
+*.html
+*.css
+**/dist/
+**/lib/
+**/libs/
+**/assets/
+**/dists/
+**/asset/
+*.dat
+*.pat
+*.patt
+**/images/
+**/image/
+**/markers/
+# .NET MAUI .gitignore file
+# This file is based on the standard Visual Studio and .NET templates.
+
+# --- Visual Studio ---
+# Ignore the .vs folder, which contains user-specific solution settings like
+# open documents, window layouts, and breakpoints.
+.vs/
+backup/
+
+# User-specific settings files
+*.suo
+*.user
+*.sln.dotsettings
+
+# --- .NET & MAUI Build Artifacts ---
+# Ignore the main build output folders. These are regenerated on every build.
+[Bb]in/
+[Oo]bj/
+
+**/*.so
+**/*.dll
+
+# --- Other Generated Files & Caches ---
+# Log files
+*.log
+*.tlog
+
+# Test results
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet packages folder (for older project styles)
+/packages
+
+# NuGet package Symbol files
+*.nupkg
+*.snupkg
+
+# --- OS-generated files ---
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
+# --- IDE-specific files (optional, but good practice) ---
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# --- Publish Folders ---
+# Ignore publish output folders, which can be configured in the .csproj
+[Pp]ublish/
+[Pp]ublish[Oo]utput/

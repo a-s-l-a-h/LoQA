@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="LoQA.Views.ChatPage"
+             Title="EasyChat">
+    <Grid RowDefinitions="Auto, *, Auto" ColumnDefinitions="*" Padding="10">
+
+        <!-- ===== SETTINGS PANEL (TOP, NOW COLLAPSIBLE) ===== -->
+        <VerticalStackLayout Grid.Row="0" Spacing="5">
+            <Button x:Name="ToggleSettingsButton" Text="Hide Settings" Clicked="ToggleSettingsButton_Clicked" />
+
+            <ScrollView x:Name="SettingsScrollView">
+                <Border x:Name="SettingsBorder" StrokeShape="RoundRectangle 10" StrokeThickness="1" Padding="15">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Model  Session Configuration" FontSize="Large" FontAttributes="Bold"/>
+
+                        <!-- Session Management -->
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <Button Grid.Column="0" x:Name="LoadSessionButton" Text="Load Session" Clicked="LoadSessionButton_Clicked" IsEnabled="False" />
+                            <Button Grid.Column="1" x:Name="SaveSessionButton" Text="Save Session" Clicked="SaveSessionButton_Clicked" IsEnabled="False" />
+                        </Grid>
+
+                        <!-- Configuration Grid -->
+                        <Label Text="Parameters" FontSize="Medium" FontAttributes="Bold" Margin="0,10,0,0"/>
+                        <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto" ColumnSpacing="15" RowSpacing="8">
+                            <Label Grid.Row="0" Grid.Column="0" Text="GPU Layers:" VerticalOptions="Center"/>
+                            <Entry Grid.Row="0" Grid.Column="1" x:Name="GpuLayersEntry" Text="0" Keyboard="Numeric"/>
+
+                            <Label Grid.Row="1" Grid.Column="0" Text="Context Size:" VerticalOptions="Center"/>
+                            <Entry Grid.Row="1" Grid.Column="1" x:Name="ContextSizeEntry" Text="4096" Keyboard="Numeric"/>
+
+                            <Label Grid.Row="2" Grid.Column="0" Text="Temperature:" VerticalOptions="Center"/>
+                            <Slider Grid.Row="2" Grid.Column="1" x:Name="TemperatureSlider" Minimum="0.0" Maximum="2.0" Value="0.7" />
+                            <Label Grid.Row="2" Grid.Column="2" Text="{Binding Source={x:Reference TemperatureSlider}, Path=Value, StringFormat='{0:F2}'}" VerticalOptions="Center"/>
+
+                            <Label Grid.Row="3" Grid.Column="0" Text="MinP:" VerticalOptions="Center"/>
+                            <Slider Grid.Row="3" Grid.Column="1" x:Name="MinPSlider" Minimum="0.0" Maximum="1.0" Value="0.9" />
+                            <Label Grid.Row="3" Grid.Column="2" Text="{Binding Source={x:Reference MinPSlider}, Path=Value, StringFormat='{0:F2}'}" VerticalOptions="Center"/>
+
+                            <Label Grid.Row="4" Grid.Column="0" Text="Seed:" VerticalOptions="Center"/>
+                            <Entry Grid.Row="4" Grid.Column="1" x:Name="SeedEntry" Text="-1" Keyboard="Numeric" Placeholder="(-1 for random)"/>
+                        </Grid>
+
+                        <!-- Action Buttons -->
+                        <Button x:Name="ClearHistoryButton" Text="Clear Chat History" Clicked="ClearHistoryButton_Clicked" IsEnabled="False" HorizontalOptions="Fill"/>
+                    </VerticalStackLayout>
+                </Border>
+            </ScrollView>
+        </VerticalStackLayout>
+
+        <!-- ===== CHAT DISPLAY (MIDDLE) ===== -->
+        <ScrollView Grid.Row="1" x:Name="ChatScrollView" Margin="0,10">
+            <Label x:Name="ConversationLabel" LineBreakMode="WordWrap"/>
+        </ScrollView>
+
+        <!-- ===== INPUT AREA (BOTTOM) ===== -->
+        <VerticalStackLayout Grid.Row="2" Spacing="5">
+            <Button x:Name="InitializeButton" Text="Initialize Model" Clicked="InitializeButton_Clicked" HorizontalOptions="Fill"/>
+            <ActivityIndicator x:Name="BusyIndicator" IsRunning="False" />
+            <Label x:Name="StatusLabel" Text="Please initialize the model." HorizontalTextAlignment="Center" FontSize="Small" TextColor="Gray"/>
+            <Editor x:Name="PromptEditor" Placeholder="Enter your prompt here..." AutoSize="TextChanges" IsEnabled="False"/>
+            <Button x:Name="SendButton" Text="Send" Clicked="SendButton_Clicked" IsEnabled="False"/>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>
