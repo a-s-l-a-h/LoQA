@@ -5,102 +5,105 @@
              x:Class="LoQA.Views.Sidebar"
              BackgroundColor="{StaticResource SidebarBackgroundColor}">
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <!-- Profile Area -->
-            <RowDefinition Height="Auto" />
-            <!-- New Chat Button -->
-            <RowDefinition Height="Auto" />
-            <!-- Model Settings Area -->
-            <RowDefinition Height="Auto" />
-            <!-- History Header -->
-            <RowDefinition Height="*" />
-            <!-- History List -->
-            <RowDefinition Height="Auto" />
-            <!-- Settings Button -->
-        </Grid.RowDefinitions>
+    <!--
+    Main Grid Layout:
+    - Row 0 (Auto):   Fixed top content (Title, buttons, slider). This section's height is determined by its content.
+    - Row 1 (*):      Scrollable history list that fills ALL remaining vertical space.
+    - Row 2 (Auto):   Fixed Settings button at the bottom. This section's height is also determined by its content.
+    -->
+    <Grid RowDefinitions="Auto, *, Auto">
 
-        <!-- Model Profile -->
-        <Border Grid.Row="0" Margin="10" Padding="15" StrokeThickness="0" BackgroundColor="#2C3E50">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="10" />
-            </Border.StrokeShape>
-            <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
-                <Image Source="dotnet_bot.png" HeightRequest="40" WidthRequest="40" Aspect="AspectFit"/>
-                <Label Text="Qwen Model" FontSize="Medium" FontAttributes="Bold" TextColor="White" VerticalOptions="Center"/>
-            </HorizontalStackLayout>
-        </Border>
+        <!-- ============================================= -->
+        <!-- TOP SECTION (Fixed Content) - Grid.Row="0"    -->
+        <!-- ============================================= -->
+        <VerticalStackLayout Grid.Row="0" Padding="10" Spacing="15">
 
-        <!-- New Chat Button -->
-        <Button Grid.Row="1"
-                x:Name="NewChatButton"
-                Text="＋ New Chat"
-                FontAttributes="Bold"
-                Clicked="NewChatButton_Clicked"
-                Margin="10,0,10,10"
-                BackgroundColor="{StaticResource PrimaryAccentColor}"
-                TextColor="{StaticResource ButtonTextColor}"/>
+            <Label Text="Lō-QA"
+                   FontSize="Header"
+                   FontAttributes="Bold"
+                   TextColor="White"
+                   HorizontalOptions="Center"
+                   Margin="0,5,0,0"/>
 
-        <!-- Temperature Slider -->
-        <VerticalStackLayout Grid.Row="2" Padding="10" Spacing="5">
-            <Label Text="Temperature" TextColor="{StaticResource PrimaryTextColor}" FontAttributes="Bold"/>
-            <Slider x:Name="TemperatureSlider" Minimum="0.0" Maximum="2.0" Value="0.8" ValueChanged="TemperatureSlider_ValueChanged" />
-            <Label x:Name="TemperatureValueLabel" Text="Current: 0.8" HorizontalOptions="Center" TextColor="{StaticResource SecondaryTextColor}"/>
-        </VerticalStackLayout>
-
-        <Label Grid.Row="3" Text="History" Margin="10,15,10,5" FontSize="Small" FontAttributes="Bold" TextColor="{StaticResource SecondaryTextColor}"/>
-
-        <!-- Conversation History List -->
-        <CollectionView Grid.Row="4"
-                          x:Name="ConversationsListView"
-                          SelectionMode="Single"
-                          ItemsSource="{Binding ConversationList}"
-                          SelectionChanged="ConversationsListView_SelectionChanged">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:ChatHistory">
-                    <SwipeView>
-                        <SwipeView.RightItems>
-                            <SwipeItem Text="Delete"
-                                       BackgroundColor="{StaticResource DestructiveColor}"
-                                       Invoked="DeleteConversation_Invoked"
-                                       CommandParameter="{Binding .}"/>
-                        </SwipeView.RightItems>
-                        <Grid Padding="15,12">
-                            <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup Name="CommonStates">
-                                    <VisualState Name="Normal" />
-                                    <VisualState Name="Selected">
-                                        <VisualState.Setters>
-                                            <Setter Property="BackgroundColor" Value="{StaticResource ListItemSelectedColor}" />
-                                        </VisualState.Setters>
-                                    </VisualState>
-                                </VisualStateGroup>
-                            </VisualStateManager.VisualStateGroups>
-                            <Label Text="{Binding Name}"
-                                   TextColor="{StaticResource PrimaryTextColor}"
-                                   FontAttributes="Bold"
-                                   LineBreakMode="TailTruncation"
-                                   VerticalOptions="Center"/>
-                        </Grid>
-                    </SwipeView>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
-        <VerticalStackLayout Grid.Row="5" Margin="10,5" Spacing="5">
             <Button x:Name="ModelsButton"
-                        Text="⚙️ Models"
-                        Clicked="ModelsButton_Clicked"
-                        BackgroundColor="#2C3E50"
-                        BorderColor="Transparent"
-                        BorderWidth="1"/>
+                    Text="⚙️ Models"
+                    Clicked="ModelsButton_Clicked"
+                    BackgroundColor="#2C3E50"
+                    BorderColor="Transparent"
+                    BorderWidth="1"/>
 
-            <Button x:Name="SettingsButton"
-                        Text="⚙️ Settings"
-                        Clicked="SettingsButton_Clicked"
-                        BackgroundColor="#2C3E50"
-                        BorderColor="Transparent"
-                        BorderWidth="1"/>
+            <Button x:Name="NewChatButton"
+                    Text="＋ New Chat"
+                    FontAttributes="Bold"
+                    Clicked="NewChatButton_Clicked"
+                    BackgroundColor="{StaticResource PrimaryAccentColor}"
+                    TextColor="{StaticResource ButtonTextColor}"/>
+
+            <VerticalStackLayout Spacing="5">
+                <Label Text="Temperature" TextColor="{StaticResource PrimaryTextColor}" FontAttributes="Bold"/>
+                <Slider x:Name="TemperatureSlider" Minimum="0.0" Maximum="2.0" Value="0.8" ValueChanged="TemperatureSlider_ValueChanged" />
+                <Label x:Name="TemperatureValueLabel" Text="Current: 0.8" HorizontalOptions="Center" TextColor="{StaticResource SecondaryTextColor}"/>
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
+
+        <!-- ==================================================== -->
+        <!-- MIDDLE SECTION (Scrollable History) - Grid.Row="1"   -->
+        <!-- ==================================================== -->
+        <!-- This inner Grid ensures the header stays fixed at the top of this scrollable section. -->
+        <Grid Grid.Row="1" RowDefinitions="Auto, *">
+
+            <Label Grid.Row="0" Text="History" Margin="10,15,10,5" FontSize="Small" FontAttributes="Bold" TextColor="{StaticResource SecondaryTextColor}"/>
+
+            <!-- The CollectionView is inherently scrollable and will fill the available space within this row. -->
+            <CollectionView Grid.Row="1"
+                              x:Name="ConversationsListView"
+                              SelectionMode="Single"
+                              ItemsSource="{Binding ConversationList}"
+                              SelectionChanged="ConversationsListView_SelectionChanged">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ChatHistory">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItem Text="Delete"
+                                           BackgroundColor="{StaticResource DestructiveColor}"
+                                           Invoked="DeleteConversation_Invoked"
+                                           CommandParameter="{Binding .}"/>
+                            </SwipeView.RightItems>
+                            <Grid Padding="15,12">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup Name="CommonStates">
+                                        <VisualState Name="Normal" />
+                                        <VisualState Name="Selected">
+                                            <VisualState.Setters>
+                                                <Setter Property="BackgroundColor" Value="{StaticResource ListItemSelectedColor}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Label Text="{Binding Name}"
+                                       TextColor="{StaticResource PrimaryTextColor}"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
+                                       VerticalOptions="Center"/>
+                            </Grid>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+
+        <!-- ============================================== -->
+        <!-- BOTTOM SECTION (Fixed Content) - Grid.Row="2"  -->
+        <!-- ============================================== -->
+        <Button Grid.Row="2"
+                x:Name="SettingsButton"
+                Text="⚙️ Settings"
+                Clicked="SettingsButton_Clicked"
+                BackgroundColor="#2C3E50"
+                BorderColor="Transparent"
+                BorderWidth="1"
+                Margin="10"/>
+
     </Grid>
 </ContentView>

@@ -38,6 +38,12 @@ namespace LoQA.Views
                 {
                     this.BindingContext = _chatService;
                     _chatService.PropertyChanged += OnServicePropertyChanged;
+
+                    // --- THIS IS THE FIX ---
+                    // Kick off the loading of conversations from the database.
+                    // Task.Run ensures it doesn't block the UI thread on startup.
+                    Task.Run(() => _chatService.LoadConversationsFromDbAsync());
+
                     UpdateAllStates();
                 }
             }
@@ -73,13 +79,12 @@ namespace LoQA.Views
             });
         }
 
-        // MODIFICATION: Update this method to disable both new buttons
         private void UpdateGeneratingState(bool isGenerating)
         {
             NewChatButton.IsEnabled = !isGenerating;
             ConversationsListView.IsEnabled = !isGenerating;
-            ModelsButton.IsEnabled = !isGenerating; // <-- Changed
-            SettingsButton.IsEnabled = !isGenerating; // <-- Changed
+            ModelsButton.IsEnabled = !isGenerating;
+            SettingsButton.IsEnabled = !isGenerating;
             TemperatureSlider.IsEnabled = !isGenerating;
         }
 
@@ -110,9 +115,12 @@ namespace LoQA.Views
             bool confirm = await page.DisplayAlert("Delete Chat?", $"Are you sure you want to delete '{convToDelete.Name}'?", "Delete", "Cancel");
             if (!confirm) return;
 
+            // Tell the DatabaseService to delete the record
             await _databaseService.DeleteConversationAsync(convToDelete.Id);
+            // Update the in-memory list in the chat service
             _chatService.ConversationList.Remove(convToDelete);
 
+            // If we deleted the active chat, start a new one
             if (_chatService.CurrentConversation?.Id == convToDelete.Id)
             {
                 _chatService.StartNewConversation();
@@ -128,7 +136,6 @@ namespace LoQA.Views
             _chatService.UpdateSamplingParams(currentParams);
         }
 
-        // MODIFICATION: Replaced old SettingsButton_Clicked with two new handlers
         private async void ModelsButton_Clicked(object sender, EventArgs e)
         {
             await Shell.Current.GoToAsync(nameof(ModelsPage));
