@@ -50,16 +50,12 @@ namespace LoQA.Views
         {
             var modelsFromDb = await _databaseService.GetModelsAsync();
 
-            foreach (var model in modelsFromDb)
-            {
-                model.IsActive = _chatService.LoadedModel?.Id == model.Id;
-            }
-
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 Models.Clear();
                 foreach (var model in modelsFromDb)
                 {
+                    model.IsActive = _chatService.LoadedModel?.Id == model.Id;
                     Models.Add(model);
                 }
             });
@@ -76,6 +72,45 @@ namespace LoQA.Views
                 StatusLabel.Text = "No model is currently loaded.";
             }
         }
+
+        // --- Only this method needs to be changed ---
+        private async void LoadButton_Clicked(object? sender, EventArgs e)
+        {
+            if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
+
+            // Step 1: Set the UI to its "loading" state
+            model.IsLoading = true;
+            model.LoadingError = null; // Clear any previous errors
+
+            try
+            {
+                // Step 2: Attempt to load the model
+                await _chatService.LoadModelAsync(model);
+
+                // If successful, the PropertyChanged event will handle the rest
+                // by calling LoadModelsAsync and refreshing the list.
+            }
+            catch (Exception ex)
+            {
+                // Step 3: If it fails, set the error message on the model
+                model.LoadingError = $"Failed to load: {ex.Message}";
+            }
+            finally
+            {
+                // Step 4: ALWAYS ensure the loading indicator is turned off
+                model.IsLoading = false;
+
+                // Manually refresh the IsActive state for all models, since the
+                // main service state might not have changed if loading failed.
+                foreach (var m in Models)
+                {
+                    m.IsActive = _chatService.LoadedModel?.Id == m.Id;
+                }
+                UpdateStatusLabel();
+            }
+        }
+
+        // ... (rest of the methods are unchanged) ...
 
         private async void AddNewModel_Clicked(object? sender, EventArgs e)
         {
@@ -152,28 +187,6 @@ namespace LoQA.Views
             }
         }
 
-        // --- MODIFIED CODE ---
-        private async void LoadButton_Clicked(object? sender, EventArgs e)
-        {
-            if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
-
-            button.IsEnabled = false;
-            StatusLabel.Text = $"Loading {model.Name}...";
-
-            try
-            {
-                await _chatService.LoadModelAsync(model);
-            }
-            catch (Exception ex)
-            {
-                await Shell.Current.DisplayAlert("Error", $"Failed to load model: {ex.Message}", "OK");
-                // FIX: On failure, refresh the UI to reset the button states
-                await LoadModelsAsync();
-                UpdateStatusLabel();
-            }
-        }
-
-        // --- MODIFIED CODE ---
         private async void UnloadButton_Clicked(object? sender, EventArgs e)
         {
             if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
@@ -184,7 +197,6 @@ namespace LoQA.Views
                 return;
             }
 
-            button.IsEnabled = false;
             StatusLabel.Text = "Unloading model...";
             try
             {
@@ -193,7 +205,6 @@ namespace LoQA.Views
             catch (Exception ex)
             {
                 await Shell.Current.DisplayAlert("Error", $"Failed to unload model: {ex.Message}", "OK");
-                // FIX: Also handle failure here to be safe
                 await LoadModelsAsync();
                 UpdateStatusLabel();
             }

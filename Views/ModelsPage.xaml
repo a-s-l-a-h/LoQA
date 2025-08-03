@@ -7,7 +7,6 @@
              Title="Manage Models"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
-    <!-- This resource dictionary makes the InverseBoolConverter available to this page -->
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
@@ -42,36 +41,48 @@
                                         <RoundRectangle CornerRadius="8"/>
                                     </Border.StrokeShape>
                                     <VerticalStackLayout Spacing="10">
-                                        <Grid ColumnDefinitions="*">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <VerticalStackLayout Grid.Row="0" VerticalOptions="Center">
-                                                <Label Text="{Binding Name}" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}"/>
-                                                <Label Text="{Binding FilePath}" FontSize="Micro" TextColor="{StaticResource SecondaryTextColor}" LineBreakMode="TailTruncation"/>
-                                                <Label FontSize="Small" FontAttributes="Italic" TextColor="{StaticResource PrimaryAccentColor}" IsVisible="{Binding IsActive}" Text="Loaded" />
-                                            </VerticalStackLayout>
+                                        <!-- Model Info Section (Unchanged) -->
+                                        <VerticalStackLayout>
+                                            <Label Text="{Binding Name}" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}"/>
+                                            <Label Text="{Binding FilePath}" FontSize="Micro" TextColor="{StaticResource SecondaryTextColor}" LineBreakMode="TailTruncation"/>
+                                            <Label FontSize="Small" FontAttributes="Italic" TextColor="{StaticResource PrimaryAccentColor}" IsVisible="{Binding IsActive}" Text="Loaded" />
+                                        </VerticalStackLayout>
 
-                                            <HorizontalStackLayout Grid.Row="1" Spacing="5" HorizontalOptions="End" Margin="0,10,0,0">
-                                                <!-- This button will now correctly use the converter -->
-                                                <Button Text="Load"
-                                                        Clicked="LoadButton_Clicked"
-                                                        CommandParameter="{Binding .}"
-                                                        IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
-                                                        HeightRequest="40"/>
-                                                <Button Text="Unload"
-                                                        Clicked="UnloadButton_Clicked"
-                                                        CommandParameter="{Binding .}"
-                                                        IsEnabled="{Binding IsActive}"
-                                                        HeightRequest="40"/>
-                                                <Button Text="Delete"
-                                                        BackgroundColor="{StaticResource DestructiveColor}"
-                                                        Clicked="DeleteButton_Clicked"
-                                                        CommandParameter="{Binding .}"
-                                                        HeightRequest="40"/>
-                                            </HorizontalStackLayout>
-                                        </Grid>
+                                       
+
+                                       
+                                        <HorizontalStackLayout Spacing="5" HorizontalOptions="End" Margin="0,10,0,0"
+                                                               IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
+                                            <Button Text="Load"
+                                                    Clicked="LoadButton_Clicked"
+                                                    CommandParameter="{Binding .}"
+                                                    IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
+                                                    HeightRequest="40"/>
+                                            <Button Text="Unload"
+                                                    Clicked="UnloadButton_Clicked"
+                                                    CommandParameter="{Binding .}"
+                                                    IsEnabled="{Binding IsActive}"
+                                                    HeightRequest="40"/>
+                                            <Button Text="Delete"
+                                                    BackgroundColor="{StaticResource DestructiveColor}"
+                                                    Clicked="DeleteButton_Clicked"
+                                                    CommandParameter="{Binding .}"
+                                                    HeightRequest="40"/>
+                                        </HorizontalStackLayout>
+
+                                        <!-- State 2: Show Activity Indicator when loading -->
+                                        <StackLayout Orientation="Horizontal" Spacing="10" Padding="10" IsVisible="{Binding IsLoading}">
+                                            <ActivityIndicator IsRunning="{Binding IsLoading}" Color="{StaticResource PrimaryAccentColor}" />
+                                            <Label Text="Loading model..." TextColor="{StaticResource SecondaryTextColor}" VerticalOptions="Center"/>
+                                        </StackLayout>
+
+                                        <!-- State 3: Show Error Message if loading fails -->
+                                        <Label Text="{Binding LoadingError}"
+                                               IsVisible="{Binding HasLoadingError}"
+                                               TextColor="{StaticResource DestructiveColor}"
+                                               FontAttributes="Bold"
+                                               Margin="0,5,0,0" />
+
                                     </VerticalStackLayout>
                                 </Border>
                             </DataTemplate>
