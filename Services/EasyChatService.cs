@@ -18,10 +18,18 @@ namespace LoQA.Services
         private ChatMessageViewModel? _currentAssistantMessage;
         private string _pendingUserPrompt = string.Empty;
 
+        public LlmModel? LoadedModel { get; private set; }
+
         public ObservableCollection<ChatMessageViewModel> CurrentMessages { get; } = new();
         public ObservableCollection<ChatHistory> ConversationList { get; } = new();
 
-        public bool IsInitialized => _chatEngine.IsInitialized;
+        private bool _isInitialized;
+        public bool IsInitialized
+        {
+            get => _isInitialized;
+            private set => SetField(ref _isInitialized, value);
+        }
+
         public bool IsGenerating
         {
             get => _isGenerating;
@@ -41,12 +49,60 @@ namespace LoQA.Services
             _chatEngine = chatEngine;
             _databaseService = databaseService;
             _chatEngine.OnTokenReceived += OnTokenReceived;
+            IsInitialized = _chatEngine.IsInitialized;
         }
 
-        public async Task InitializeEngineAsync(string modelPath, ChatModelParams modelParams, ChatContextParams ctxParams)
+        public async Task LoadModelAsync(LlmModel modelToLoad)
         {
-            await _chatEngine.InitializeAsync(modelPath, modelParams, ctxParams);
-            OnPropertyChanged(nameof(IsInitialized));
+            if (IsInitialized)
+            {
+                await UnloadModelAsync();
+            }
+
+            try
+            {
+                var modelParams = GetDefaultModelParams();
+                var ctxParams = GetDefaultContextParams();
+                modelParams.n_gpu_layers = 50;
+                ctxParams.n_ctx = 4096;
+
+                bool success = await _chatEngine.InitializeAsync(modelToLoad.FilePath, modelParams, ctxParams);
+
+                if (success)
+                {
+                    LoadedModel = modelToLoad;
+                    IsInitialized = true;
+                    OnPropertyChanged(nameof(LoadedModel));
+                }
+                else
+                {
+                    LoadedModel = null;
+                    IsInitialized = false;
+                    throw new Exception($"Failed to initialize model: {_chatEngine.GetLastError()}");
+                }
+            }
+            catch (Exception)
+            {
+                LoadedModel = null;
+                IsInitialized = false;
+                throw;
+            }
+        }
+
+        public Task UnloadModelAsync()
+        {
+            if (!IsInitialized)
+            {
+                return Task.CompletedTask;
+            }
+
+            _chatEngine.Dispose();
+            LoadedModel = null;
+            IsInitialized = false;
+            OnPropertyChanged(nameof(LoadedModel));
+
+            StartNewConversation();
+            return Task.CompletedTask;
         }
 
         public async Task LoadConversationsFromDbAsync()
@@ -86,7 +142,7 @@ namespace LoQA.Services
 
         public async Task SendMessageAsync(string prompt)
         {
-            if (IsGenerating || string.IsNullOrWhiteSpace(prompt) || !_chatEngine.IsInitialized)
+            if (IsGenerating || string.IsNullOrWhiteSpace(prompt) || !IsInitialized)
             {
                 return;
             }
@@ -109,7 +165,6 @@ namespace LoQA.Services
 
                 await _chatEngine.GenerateAsync(prompt);
 
-                // This logic now reliably executes after generation is complete
                 if (_currentAssistantMessage != null)
                 {
                     var finalAssistantContent = _currentAssistantMessage.Content.Trim();
@@ -132,7 +187,6 @@ namespace LoQA.Services
             }
             finally
             {
-                // Critical block to ensure UI is always unlocked
                 IsGenerating = false;
                 _currentAssistantMessage = null;
                 _pendingUserPrompt = string.Empty;

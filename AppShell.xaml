@@ -4,19 +4,18 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:LoQA.Views"
-    Shell.FlyoutBehavior="Disabled"
+    Shell.FlyoutBehavior="Flyout"
     Title="LoQA">
 
-    <!-- The Home Page is now the main and only content -->
-    <ShellContent
-        Title="EasyChat"
-        ContentTemplate="{DataTemplate views:HomePage}"
-        Route="HomePage" />
+    <Shell.FlyoutHeader>
+        <views:Sidebar />
+    </Shell.FlyoutHeader>
 
-    <!-- Define the route for the settings page so we can navigate to it -->
-    <ShellContent
-        Title="Settings"
-        ContentTemplate="{DataTemplate views:SettingsPage}"
-        Route="SettingsPage" />
+    <FlyoutItem Title="EasyChat" FlyoutIcon="dotnet_bot.png">
+        <ShellContent
+            Title="EasyChat"
+            ContentTemplate="{DataTemplate views:ChatContentPage}"
+            Route="ChatContentPage" />
+    </FlyoutItem>
 
 </Shell>

@@ -12,7 +12,7 @@ namespace LoQA.Services
     {
         private SQLiteAsyncConnection? _connection;
 
-        // Establishes connection and creates the table if it doesn't exist.
+        // Establishes connection and creates tables if they don't exist.
         public async Task InitAsync()
         {
             if (_connection != null)
@@ -21,6 +21,8 @@ namespace LoQA.Services
             var databasePath = Path.Combine(FileSystem.AppDataDirectory, "ChatSessions.db3");
             _connection = new SQLiteAsyncConnection(databasePath);
             await _connection.CreateTableAsync<ChatHistory>();
+            // Add this line to create the model table
+            await _connection.CreateTableAsync<LlmModel>();
         }
 
         // Retrieves a list of all conversations, ordered by the most recently modified.
@@ -59,6 +61,42 @@ namespace LoQA.Services
         {
             await InitAsync();
             return await _connection!.DeleteAsync<ChatHistory>(id);
+        }
+
+        // --- NEW METHODS FOR LLMMODEL ---
+
+        public async Task<List<LlmModel>> GetModelsAsync()
+        {
+            await InitAsync();
+            return await _connection!.Table<LlmModel>().ToListAsync();
+        }
+
+        public async Task<int> SaveModelAsync(LlmModel model)
+        {
+            await InitAsync();
+            if (model.Id != 0)
+            {
+                return await _connection!.UpdateAsync(model);
+            }
+            else
+            {
+                return await _connection!.InsertAsync(model);
+            }
+        }
+
+        public async Task<int> DeleteModelAsync(int id)
+        {
+            await InitAsync();
+            return await _connection!.DeleteAsync<LlmModel>(id);
+        }
+
+        public async Task SetActiveModelAsync(int modelId)
+        {
+            await InitAsync();
+            // Deactivate all other models
+            await _connection!.ExecuteAsync("UPDATE llm_models SET IsActive = 0");
+            // Activate the selected model
+            await _connection!.ExecuteAsync("UPDATE llm_models SET IsActive = 1 WHERE Id = ?", modelId);
         }
     }
 }

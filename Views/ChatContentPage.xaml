@@ -1,18 +1,24 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
-             x:Class="LoQA.Views.ChatContentView">
+             x:Class="LoQA.Views.ChatContentPage"
+             Title="EasyChat"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
 
-    <Grid RowDefinitions="Auto, *, Auto" Padding="0, 10, 10, 10" ColumnSpacing="10">
+    <NavigationPage.TitleView>
+        <Label x:Name="StatusLabel" 
+               Text="Please initialize the model." 
+               TextColor="{StaticResource SecondaryTextColor}" 
+               VerticalTextAlignment="Center" 
+               HorizontalTextAlignment="Center"/>
+    </NavigationPage.TitleView>
 
-        <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="5" Margin="0,0,0,5">
-            <Button x:Name="ToggleSidebarButton" Text="☰" FontAttributes="Bold" WidthRequest="50" Clicked="ToggleSidebarButton_Clicked" />
-            <Label Grid.Column="1" x:Name="StatusLabel" Text="Please initialize the model." TextColor="{StaticResource SecondaryTextColor}" HorizontalTextAlignment="Center" VerticalTextAlignment="Center"/>
-            <Button Grid.Column="2" x:Name="InitializeButton" Text="Initialize Model" Clicked="InitializeButton_Clicked" HorizontalOptions="End"/>
-        </Grid>
+    <!-- The ToolbarItem for initialization has been removed. -->
 
-        <CollectionView Grid.Row="1" 
+    <Grid RowDefinitions="*, Auto" Padding="10" ColumnSpacing="10">
+
+        <CollectionView Grid.Row="0" 
                         x:Name="ChatMessagesView" 
                         Margin="5,0" 
                         ItemsSource="{Binding CurrentMessages}"
@@ -37,7 +43,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Grid Grid.Row="2" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="5,10,0,0" IsEnabled="False" x:Name="InputGrid">
+        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="5,10,0,0" IsEnabled="False" x:Name="InputGrid">
             <Editor Grid.Column="0"
                     x:Name="PromptEditor"
                     Placeholder="Enter your prompt here..."
@@ -60,11 +66,12 @@
                     BackgroundColor="{StaticResource DestructiveColor}"/>
         </Grid>
 
-        <ActivityIndicator Grid.Row="1" 
+        <ActivityIndicator Grid.Row="0" 
                            x:Name="BusyIndicator" 
                            IsRunning="False" 
+                           IsVisible="False"
                            HorizontalOptions="Center" 
                            VerticalOptions="Center" 
                            Color="{StaticResource PrimaryAccentColor}" />
     </Grid>
-</ContentView>
+</ContentPage>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:LoQA.Models"
+             x:Class="LoQA.Views.ModelsPage"
+             Title="Manage Models"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="25">
+
+            <Button Text="← Back to Chat"
+                    Clicked="BackButton_Clicked"
+                    HorizontalOptions="Start"
+                    Margin="0,0,0,15"/>
+
+            <Border Stroke="{StaticResource PrimaryAccentColor}" StrokeThickness="1" Padding="15">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="10"/>
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="15">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Grid.Column="0" Text="LLM Models" FontSize="Large" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="+ Add Model" Clicked="AddNewModel_Clicked" HorizontalOptions="End"/>
+                    </Grid>
+
+                    <Label x:Name="StatusLabel" Text="Loading models..." TextColor="{StaticResource SecondaryTextColor}" HorizontalOptions="Center" Margin="10"/>
+
+                    <CollectionView x:Name="ModelsListView">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:LlmModel">
+                                <Border Padding="10" Margin="0,5" Stroke="{StaticResource SidebarBackgroundColor}" StrokeThickness="1">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="8"/>
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout Spacing="10">
+                                        <Grid ColumnDefinitions="*">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <VerticalStackLayout Grid.Row="0" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}"/>
+                                                <Label Text="{Binding FilePath}" FontSize="Micro" TextColor="{StaticResource SecondaryTextColor}" LineBreakMode="TailTruncation"/>
+                                                <Label FontSize="Small" FontAttributes="Italic" TextColor="{StaticResource PrimaryAccentColor}" IsVisible="{Binding IsActive}" Text="Loaded" />
+                                            </VerticalStackLayout>
+
+                                            <HorizontalStackLayout Grid.Row="1" Spacing="5" HorizontalOptions="End" Margin="0,10,0,0">
+                                                <Button Text="Load"
+                                                        Clicked="LoadButton_Clicked"
+                                                        CommandParameter="{Binding .}"
+                                                        IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
+                                                        HeightRequest="40"/>
+                                                <Button Text="Unload"
+                                                        Clicked="UnloadButton_Clicked"
+                                                        CommandParameter="{Binding .}"
+                                                        IsEnabled="{Binding IsActive}"
+                                                        HeightRequest="40"/>
+                                                <Button Text="Delete"
+                                                        BackgroundColor="{StaticResource DestructiveColor}"
+                                                        Clicked="DeleteButton_Clicked"
+                                                        CommandParameter="{Binding .}"
+                                                        HeightRequest="40"/>
+                                            </HorizontalStackLayout>
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

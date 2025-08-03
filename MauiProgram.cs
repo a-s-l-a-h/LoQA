@@ -25,9 +25,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<EasyChatService>();
         builder.Services.AddSingleton<DatabaseService>();
 
-        // Register HomePage as the main page singleton.
-        builder.Services.AddSingleton<HomePage>();
+        // Register ChatContentPage as the main page singleton.
+        builder.Services.AddSingleton<ChatContentPage>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<ModelsPage>();
 
         return builder.Build();
     }

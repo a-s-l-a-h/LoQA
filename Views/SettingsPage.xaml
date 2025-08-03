@@ -4,13 +4,22 @@
              x:Class="LoQA.Views.SettingsPage"
              Title="Settings"
              BackgroundColor="{StaticResource PageBackgroundColor}">
-    <VerticalStackLayout Padding="20">
-        <Label
-            Text="Settings will go here."
-            TextColor="{StaticResource PrimaryTextColor}"
-            FontSize="Large"
-            VerticalOptions="Center"
-            HorizontalOptions="Center" />
-        <!-- Add settings controls here in the future -->
+    <VerticalStackLayout Padding="20" Spacing="25">
+
+        <Button Text="← Back to Chat"
+                Clicked="BackButton_Clicked"
+                HorizontalOptions="Start"
+                Margin="0,0,0,15"/>
+
+        <Label Text="General Settings"
+               FontSize="Large"
+               FontAttributes="Bold"
+               VerticalOptions="Center" 
+               HorizontalOptions="Center" />
+
+        <Label Text="This page is a placeholder for future application settings."
+               VerticalOptions="Center" 
+               HorizontalOptions="Center" />
+
     </VerticalStackLayout>
 </ContentPage>

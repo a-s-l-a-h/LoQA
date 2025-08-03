@@ -2,19 +2,26 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
-             x:Class="LoQA.Views.SidebarView"
+             x:Class="LoQA.Views.Sidebar"
              BackgroundColor="{StaticResource SidebarBackgroundColor}">
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <!-- Profile Area -->
             <RowDefinition Height="Auto" />
+            <!-- New Chat Button -->
             <RowDefinition Height="Auto" />
+            <!-- Model Settings Area -->
             <RowDefinition Height="Auto" />
+            <!-- History Header -->
             <RowDefinition Height="*" />
+            <!-- History List -->
             <RowDefinition Height="Auto" />
+            <!-- Settings Button -->
         </Grid.RowDefinitions>
 
+        <!-- Model Profile -->
         <Border Grid.Row="0" Margin="10" Padding="15" StrokeThickness="0" BackgroundColor="#2C3E50">
             <Border.StrokeShape>
                 <RoundRectangle CornerRadius="10" />
@@ -25,6 +32,7 @@
             </HorizontalStackLayout>
         </Border>
 
+        <!-- New Chat Button -->
         <Button Grid.Row="1"
                 x:Name="NewChatButton"
                 Text="＋ New Chat"
@@ -34,6 +42,7 @@
                 BackgroundColor="{StaticResource PrimaryAccentColor}"
                 TextColor="{StaticResource ButtonTextColor}"/>
 
+        <!-- Temperature Slider -->
         <VerticalStackLayout Grid.Row="2" Padding="10" Spacing="5">
             <Label Text="Temperature" TextColor="{StaticResource PrimaryTextColor}" FontAttributes="Bold"/>
             <Slider x:Name="TemperatureSlider" Minimum="0.0" Maximum="2.0" Value="0.8" ValueChanged="TemperatureSlider_ValueChanged" />
@@ -42,6 +51,7 @@
 
         <Label Grid.Row="3" Text="History" Margin="10,15,10,5" FontSize="Small" FontAttributes="Bold" TextColor="{StaticResource SecondaryTextColor}"/>
 
+        <!-- Conversation History List -->
         <CollectionView Grid.Row="4"
                           x:Name="ConversationsListView"
                           SelectionMode="Single"
@@ -77,14 +87,20 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
+        <VerticalStackLayout Grid.Row="5" Margin="10,5" Spacing="5">
+            <Button x:Name="ModelsButton"
+                        Text="⚙️ Models"
+                        Clicked="ModelsButton_Clicked"
+                        BackgroundColor="#2C3E50"
+                        BorderColor="Transparent"
+                        BorderWidth="1"/>
 
-        <Button Grid.Row="5"
-                Text="⚙️ Settings"
-                x:Name="SettingsButton"
-                Clicked="SettingsButton_Clicked"
-                Margin="10"
-                BackgroundColor="#2C3E50"
-                BorderColor="Transparent"
-                BorderWidth="1"/>
+            <Button x:Name="SettingsButton"
+                        Text="⚙️ Settings"
+                        Clicked="SettingsButton_Clicked"
+                        BackgroundColor="#2C3E50"
+                        BorderColor="Transparent"
+                        BorderWidth="1"/>
+        </VerticalStackLayout>
     </Grid>
 </ContentView>
