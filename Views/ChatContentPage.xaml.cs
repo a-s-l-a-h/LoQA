@@ -5,29 +5,47 @@ namespace LoQA.Views
 {
     public partial class ChatContentPage : ContentPage
     {
-        private EasyChatService? _chatService;
+        // Keep a direct reference to the service
+        private readonly EasyChatService _chatService;
         private bool _isUserScrolledUp = false;
 
-        public ChatContentPage()
+        // --- MODIFICATION: INJECT THE SERVICE HERE ---
+        // The DI container will automatically provide the singleton instance of EasyChatService
+        public ChatContentPage(EasyChatService chatService)
         {
             InitializeComponent();
+
+            // Store the service instance
+            _chatService = chatService;
+
+            // --- THIS IS THE CRITICAL FIX ---
+            // Set the BindingContext directly. This will now trigger OnBindingContextChanged().
+            BindingContext = _chatService;
         }
 
         protected override void OnBindingContextChanged()
         {
             base.OnBindingContextChanged();
+
+            // This logic is already correct, but now it will actually run.
             if (BindingContext is EasyChatService service)
             {
-                if (_chatService != null)
+                // Unsubscribe first to prevent duplicate subscriptions if this were ever called again
+                service.PropertyChanged -= OnServicePropertyChanged;
+                // Subscribe to future changes
+                service.PropertyChanged += OnServicePropertyChanged;
+
+                // Set the initial UI state based on the service's current state
+                if (service.IsInitialized)
                 {
-                    _chatService.PropertyChanged -= OnServicePropertyChanged;
+                    SetReadyState();
+                }
+                else
+                {
+                    SetUnreadyState();
                 }
 
-                _chatService = service;
-                _chatService.PropertyChanged += OnServicePropertyChanged;
-
-                if (_chatService.IsInitialized) SetReadyState();
-                UpdateGeneratingState(_chatService.IsGenerating);
+                UpdateGeneratingState(service.IsGenerating);
                 UpdateStatusLabel();
             }
         }
@@ -47,8 +65,14 @@ namespace LoQA.Views
                         UpdateStatusLabel();
                         break;
                     case nameof(EasyChatService.IsInitialized):
-                        if (_chatService.IsInitialized) SetReadyState();
-                        else SetUnreadyState();
+                        if (_chatService.IsInitialized)
+                        {
+                            SetReadyState();
+                        }
+                        else
+                        {
+                            SetUnreadyState();
+                        }
                         break;
                 }
             });

@@ -7,20 +7,18 @@
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
     <NavigationPage.TitleView>
-        <Label x:Name="StatusLabel" 
-               Text="Please initialize the model." 
-               TextColor="{StaticResource SecondaryTextColor}" 
-               VerticalTextAlignment="Center" 
+        <Label x:Name="StatusLabel"
+               Text="Please initialize the model."
+               TextColor="{StaticResource SecondaryTextColor}"
+               VerticalTextAlignment="Center"
                HorizontalTextAlignment="Center"/>
     </NavigationPage.TitleView>
 
-    <!-- The ToolbarItem for initialization has been removed. -->
-
     <Grid RowDefinitions="*, Auto" Padding="10" ColumnSpacing="10">
 
-        <CollectionView Grid.Row="0" 
-                        x:Name="ChatMessagesView" 
-                        Margin="5,0" 
+        <CollectionView Grid.Row="0"
+                        x:Name="ChatMessagesView"
+                        Margin="5,0"
                         ItemsSource="{Binding CurrentMessages}"
                         ItemsUpdatingScrollMode="KeepLastItemInView"
                         Scrolled="ChatMessagesView_Scrolled">
@@ -66,12 +64,12 @@
                     BackgroundColor="{StaticResource DestructiveColor}"/>
         </Grid>
 
-        <ActivityIndicator Grid.Row="0" 
-                           x:Name="BusyIndicator" 
-                           IsRunning="False" 
+        <ActivityIndicator Grid.Row="0"
+                           x:Name="BusyIndicator"
+                           IsRunning="False"
                            IsVisible="False"
-                           HorizontalOptions="Center" 
-                           VerticalOptions="Center" 
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
                            Color="{StaticResource PrimaryAccentColor}" />
     </Grid>
 </ContentPage>

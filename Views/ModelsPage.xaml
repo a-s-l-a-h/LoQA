@@ -2,9 +2,18 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
+             xmlns:converters="clr-namespace:LoQA.Converters"
              x:Class="LoQA.Views.ModelsPage"
              Title="Manage Models"
              BackgroundColor="{StaticResource PageBackgroundColor}">
+
+    <!-- This resource dictionary makes the InverseBoolConverter available to this page -->
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="25">
 
@@ -45,6 +54,7 @@
                                             </VerticalStackLayout>
 
                                             <HorizontalStackLayout Grid.Row="1" Spacing="5" HorizontalOptions="End" Margin="0,10,0,0">
+                                                <!-- This button will now correctly use the converter -->
                                                 <Button Text="Load"
                                                         Clicked="LoadButton_Clicked"
                                                         CommandParameter="{Binding .}"

@@ -6,7 +6,6 @@ using System.Diagnostics;
 
 namespace LoQA.Views
 {
-    // FIX: Added the "partial" keyword to correctly link this file with its XAML counterpart.
     public partial class ModelsPage : ContentPage
     {
         private readonly DatabaseService _databaseService;
@@ -15,10 +14,10 @@ namespace LoQA.Views
 
         public ModelsPage(DatabaseService databaseService, EasyChatService chatService)
         {
-            InitializeComponent(); // This will now be recognized.
+            InitializeComponent();
             _databaseService = databaseService;
             _chatService = chatService;
-            ModelsListView.ItemsSource = Models; // This will now be recognized.
+            ModelsListView.ItemsSource = Models;
         }
 
         protected override void OnAppearing()
@@ -70,12 +69,10 @@ namespace LoQA.Views
         {
             if (_chatService.IsInitialized && _chatService.LoadedModel != null)
             {
-                // This will now be recognized.
                 StatusLabel.Text = $"Loaded: {_chatService.LoadedModel.Name}";
             }
             else
             {
-                // This will now be recognized.
                 StatusLabel.Text = "No model is currently loaded.";
             }
         }
@@ -155,12 +152,12 @@ namespace LoQA.Views
             }
         }
 
+        // --- MODIFIED CODE ---
         private async void LoadButton_Clicked(object? sender, EventArgs e)
         {
             if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
 
             button.IsEnabled = false;
-            // This will now be recognized.
             StatusLabel.Text = $"Loading {model.Name}...";
 
             try
@@ -170,9 +167,13 @@ namespace LoQA.Views
             catch (Exception ex)
             {
                 await Shell.Current.DisplayAlert("Error", $"Failed to load model: {ex.Message}", "OK");
+                // FIX: On failure, refresh the UI to reset the button states
+                await LoadModelsAsync();
+                UpdateStatusLabel();
             }
         }
 
+        // --- MODIFIED CODE ---
         private async void UnloadButton_Clicked(object? sender, EventArgs e)
         {
             if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
@@ -184,7 +185,6 @@ namespace LoQA.Views
             }
 
             button.IsEnabled = false;
-            // This will now be recognized.
             StatusLabel.Text = "Unloading model...";
             try
             {
@@ -193,6 +193,9 @@ namespace LoQA.Views
             catch (Exception ex)
             {
                 await Shell.Current.DisplayAlert("Error", $"Failed to unload model: {ex.Message}", "OK");
+                // FIX: Also handle failure here to be safe
+                await LoadModelsAsync();
+                UpdateStatusLabel();
             }
         }
 
