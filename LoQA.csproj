@@ -263,6 +263,29 @@
 	<PropertyGroup>
 		<EnableLongPath>true</EnableLongPath>
 	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
+	  <PublishTrimmed>False</PublishTrimmed>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
+	  <PublishTrimmed>True</PublishTrimmed>
+	  <RunAOTCompilation>True</RunAOTCompilation>
+	</PropertyGroup>
+
+	<!-- ===================================================================== -->
+	<!-- === ACTION: ADD THIS ITEMGROUP FOR THE LINKER CONFIG              === -->
+	<!-- ===================================================================== -->
+	<ItemGroup>
+		<!-- This tells the build system to use our linker configuration file. -->
+		<LinkDescription Include="linker.xml" />
+	</ItemGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
+		<!-- ... other properties ... -->
+
+		<!-- ACTION: ADD/MODIFY THESE LINES -->
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+
+	</PropertyGroup>
 
 
 </Project>

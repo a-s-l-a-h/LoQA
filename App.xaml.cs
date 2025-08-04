@@ -1,6 +1,7 @@
 ﻿// Add these using statements at the top
 using LoQA.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace LoQA
 {
@@ -16,24 +17,25 @@ namespace LoQA
             var window = new Window(new AppShell());
 
             // =========================================================================
-            // === ADDED LIFECYCLE HOOK FOR PROPER SHUTDOWN CLEANUP                  ===
+            // === ACTION: ADDED LIFECYCLE HOOK FOR PROPER SHUTDOWN CLEANUP          ===
             // =========================================================================
             // The 'Destroying' event is triggered when the app window is about to close.
             window.Destroying += (s, e) =>
             {
-                // We need to get the instance of our service from the Dependency Injection container.
+                // Resolve the singleton instance of our service from the Dependency Injection container.
                 var chatService = IPlatformApplication.Current?.Services.GetService<EasyChatService>();
 
                 // If the service exists and has a model loaded...
                 if (chatService != null && chatService.IsInitialized)
                 {
-                    System.Diagnostics.Debug.WriteLine("App is closing. Unloading model to free resources...");
+                    Debug.WriteLine("App is closing. Disposing EasyChatService to unload model and free native resources...");
 
-                    // ...call our new Dispose method. This will chain the call down to the
-                    // native freeLlama() function in the C++ library.
+                    // ...call our Dispose method. This chains the call down to the
+                    // native freeLlama() function via EasyChatEngine.Dispose().
+                    // This is critical for releasing potentially gigabytes of memory.
                     chatService.Dispose();
 
-                    System.Diagnostics.Debug.WriteLine("Model successfully unloaded.");
+                    Debug.WriteLine("Chat service disposed and model successfully unloaded.");
                 }
             };
             // --- END OF ADDED CODE ---

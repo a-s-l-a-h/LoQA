@@ -5,18 +5,23 @@ using System.Threading.Tasks;
 namespace LoQA.Services
 {
     #region P/Invoke Structs
-    [StructLayout(LayoutKind.Sequential)]
+    // =========================================================================
+    // === THE FIX: Replacing 'bool' with 'byte' to remove any marshalling  ===
+    // ===          ambiguity for the AOT compiler. (1=true, 0=false)        ===
+    // =========================================================================
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct ChatModelParams
     {
         public int n_gpu_layers;
         public int main_gpu;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
         public float[] tensor_split;
-        [MarshalAs(UnmanagedType.I1)] public bool use_mmap;
-        [MarshalAs(UnmanagedType.I1)] public bool use_mlock;
+        public byte use_mmap;  // <-- CHANGED FROM BOOL TO BYTE
+        public byte use_mlock; // <-- CHANGED FROM BOOL TO BYTE
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct ChatContextParams
     {
         public int n_ctx;
@@ -25,8 +30,8 @@ namespace LoQA.Services
         public int n_threads_batch;
         public float rope_freq_base;
         public float rope_freq_scale;
-        [MarshalAs(UnmanagedType.I1)] public bool offload_kqv;
-        [MarshalAs(UnmanagedType.I1)] public bool flash_attn;
+        public byte offload_kqv; // <-- CHANGED FROM BOOL TO BYTE
+        public byte flash_attn;  // <-- CHANGED FROM BOOL TO BYTE
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -41,14 +46,10 @@ namespace LoQA.Services
     public interface IEasyChatWrapper : IDisposable
     {
         event Action<string>? OnTokenReceived;
-
         bool IsInitialized { get; }
-
         Task<bool> InitializeAsync(string modelPath, ChatModelParams modelParams, ChatContextParams ctxParams);
-
         Task GenerateAsync(string prompt, int maxTokens = 4096);
         void StopGeneration();
-
         bool UpdateSamplingParams(ChatSamplingParams newParams);
         ChatSamplingParams GetCurrentSamplingParams();
         ChatModelParams GetDefaultModelParams();
