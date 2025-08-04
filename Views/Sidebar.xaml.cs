@@ -38,12 +38,7 @@ namespace LoQA.Views
                 {
                     this.BindingContext = _chatService;
                     _chatService.PropertyChanged += OnServicePropertyChanged;
-
-                    // --- THIS IS THE FIX ---
-                    // Kick off the loading of conversations from the database.
-                    // Task.Run ensures it doesn't block the UI thread on startup.
                     Task.Run(() => _chatService.LoadConversationsFromDbAsync());
-
                     UpdateAllStates();
                 }
             }
@@ -104,9 +99,9 @@ namespace LoQA.Views
             if (Shell.Current is not null) Shell.Current.FlyoutIsPresented = false;
         }
 
-        private async void DeleteConversation_Invoked(object? sender, EventArgs e)
+        private async void DeleteButton_Clicked(object sender, EventArgs e)
         {
-            if ((sender as SwipeItem)?.CommandParameter is not ChatHistory convToDelete) return;
+            if ((sender as Button)?.CommandParameter is not ChatHistory convToDelete) return;
             if (_databaseService == null || _chatService == null) return;
 
             var page = this.GetParentPage();
@@ -115,12 +110,9 @@ namespace LoQA.Views
             bool confirm = await page.DisplayAlert("Delete Chat?", $"Are you sure you want to delete '{convToDelete.Name}'?", "Delete", "Cancel");
             if (!confirm) return;
 
-            // Tell the DatabaseService to delete the record
             await _databaseService.DeleteConversationAsync(convToDelete.Id);
-            // Update the in-memory list in the chat service
             _chatService.ConversationList.Remove(convToDelete);
 
-            // If we deleted the active chat, start a new one
             if (_chatService.CurrentConversation?.Id == convToDelete.Id)
             {
                 _chatService.StartNewConversation();

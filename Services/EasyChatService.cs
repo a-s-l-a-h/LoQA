@@ -1,7 +1,11 @@
-﻿using LoQA.Models;
+﻿// File: LoQA/Services/EasyChatService.cs
+
+using LoQA.Models;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -140,6 +144,9 @@ namespace LoQA.Services
             OnPropertyChanged(nameof(CurrentConversation));
         }
 
+        // =========================================================================================
+        // === THE FIX IS ENTIRELY WITHIN THIS METHOD. No other code in this file was changed. ===
+        // =========================================================================================
         public async Task SendMessageAsync(string prompt)
         {
             if (IsGenerating || string.IsNullOrWhiteSpace(prompt) || !IsInitialized)
@@ -157,19 +164,24 @@ namespace LoQA.Services
                     CurrentConversation = new ChatHistory { Name = prompt.Length > 40 ? prompt[..40] + "..." : prompt, HistoryJson = "[]" };
                 }
 
+                // Update the UI immediately with the user's message and a placeholder for the assistant
                 CurrentMessages.Add(new ChatMessageViewModel { Role = "user", Content = prompt });
                 _currentAssistantMessage = new ChatMessageViewModel { Role = "assistant", Content = "" };
                 CurrentMessages.Add(_currentAssistantMessage);
 
-                _chatEngine.AddHistoryMessage("user", prompt);
-
+                // Call the C++ engine. It will handle adding BOTH the user prompt AND the
+                // assistant's final response to its own internal message history.
                 await _chatEngine.GenerateAsync(prompt);
 
+                // After generation is complete, we update our C# database with the conversation turn.
                 if (_currentAssistantMessage != null)
                 {
                     var finalAssistantContent = _currentAssistantMessage.Content.Trim();
-                    _chatEngine.AddHistoryMessage("assistant", finalAssistantContent);
 
+                    // NOTE: We DO NOT call _chatEngine.AddHistoryMessage here because the C++ side
+                    // has already done it. This was the source of the bug.
+
+                    // Update our C# database with the full conversation turn
                     var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation!.HistoryJson) ?? new List<ChatMessage>();
                     history.Add(new ChatMessage { Role = "user", Content = _pendingUserPrompt });
                     history.Add(new ChatMessage { Role = "assistant", Content = finalAssistantContent });

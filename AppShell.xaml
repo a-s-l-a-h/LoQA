@@ -7,15 +7,22 @@
     Shell.FlyoutBehavior="Flyout"
     Title="LoQA">
 
-    <Shell.FlyoutHeader>
+    <!-- This correctly sets your custom sidebar as the entire menu -->
+    <Shell.FlyoutContent>
         <views:Sidebar />
-    </Shell.FlyoutHeader>
+    </Shell.FlyoutContent>
 
-    <FlyoutItem Title="EasyChat" FlyoutIcon="dotnet_bot.png">
-        <ShellContent
-            Title="EasyChat"
-            ContentTemplate="{DataTemplate views:ChatContentPage}"
-            Route="ChatContentPage" />
-    </FlyoutItem>
+    <!--
+    This defines the main screen of your application.
+    AND THE FIX IS HERE: We have added Shell.FlyoutItemIsVisible="False".
+
+    This explicitly tells the Shell:
+    "DO NOT SHOW THIS ITEM IN THE SIDEBAR MENU."
+    -->
+    <ShellContent
+        Title="EasyChat"
+        ContentTemplate="{DataTemplate views:ChatContentPage}"
+        Route="ChatContentPage"
+        Shell.FlyoutItemIsVisible="False" />
 
 </Shell>
