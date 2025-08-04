@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace LoQA.Services
 {
-    public class EasyChatService : INotifyPropertyChanged
+    public class EasyChatService : INotifyPropertyChanged, IDisposable
     {
         private readonly IEasyChatWrapper _chatEngine;
         private readonly DatabaseService _databaseService;
@@ -56,6 +56,9 @@ namespace LoQA.Services
             IsInitialized = _chatEngine.IsInitialized;
         }
 
+        // =========================================================================
+        // === MODIFIED METHOD FOR MOBILE STABILITY (MEMORY MANAGEMENT)          ===
+        // =========================================================================
         public async Task LoadModelAsync(LlmModel modelToLoad)
         {
             if (IsInitialized)
@@ -67,8 +70,21 @@ namespace LoQA.Services
             {
                 var modelParams = GetDefaultModelParams();
                 var ctxParams = GetDefaultContextParams();
-                modelParams.n_gpu_layers = 50;
+
+                // --- CRITICAL CHANGES FOR MOBILE STABILITY ---
+                modelParams.use_mmap = true;   // USE MEMORY MAPPING! This is essential for large files on mobile.
+                modelParams.use_mlock = false; // mlock can cause issues on constrained devices, better to disable.
+
+                // Use preprocessor directives to apply more conservative settings for mobile.
+#if ANDROID || IOS
+                ctxParams.n_ctx = 2048;        // Reduce context size from 4096 to 2048 to save RAM.
+                modelParams.n_gpu_layers = 25; // Reduce GPU layers. More layers = more VRAM usage.
+#else
+                // Keep more aggressive settings for desktop platforms.
                 ctxParams.n_ctx = 4096;
+                modelParams.n_gpu_layers = 50;
+#endif
+                // --- END OF CRITICAL CHANGES ---
 
                 bool success = await _chatEngine.InitializeAsync(modelToLoad.FilePath, modelParams, ctxParams);
 
@@ -89,7 +105,7 @@ namespace LoQA.Services
             {
                 LoadedModel = null;
                 IsInitialized = false;
-                throw;
+                throw; // Re-throw the exception so the UI layer can catch it.
             }
         }
 
@@ -100,11 +116,12 @@ namespace LoQA.Services
                 return Task.CompletedTask;
             }
 
-            _chatEngine.Dispose();
+            _chatEngine.Dispose(); // This calls freeLlama()
             LoadedModel = null;
             IsInitialized = false;
             OnPropertyChanged(nameof(LoadedModel));
 
+            // Reset the chat view to a clean state.
             StartNewConversation();
             return Task.CompletedTask;
         }
@@ -144,9 +161,6 @@ namespace LoQA.Services
             OnPropertyChanged(nameof(CurrentConversation));
         }
 
-        // =========================================================================================
-        // === THE FIX IS ENTIRELY WITHIN THIS METHOD. No other code in this file was changed. ===
-        // =========================================================================================
         public async Task SendMessageAsync(string prompt)
         {
             if (IsGenerating || string.IsNullOrWhiteSpace(prompt) || !IsInitialized)
@@ -164,24 +178,16 @@ namespace LoQA.Services
                     CurrentConversation = new ChatHistory { Name = prompt.Length > 40 ? prompt[..40] + "..." : prompt, HistoryJson = "[]" };
                 }
 
-                // Update the UI immediately with the user's message and a placeholder for the assistant
                 CurrentMessages.Add(new ChatMessageViewModel { Role = "user", Content = prompt });
                 _currentAssistantMessage = new ChatMessageViewModel { Role = "assistant", Content = "" };
                 CurrentMessages.Add(_currentAssistantMessage);
 
-                // Call the C++ engine. It will handle adding BOTH the user prompt AND the
-                // assistant's final response to its own internal message history.
                 await _chatEngine.GenerateAsync(prompt);
 
-                // After generation is complete, we update our C# database with the conversation turn.
                 if (_currentAssistantMessage != null)
                 {
                     var finalAssistantContent = _currentAssistantMessage.Content.Trim();
 
-                    // NOTE: We DO NOT call _chatEngine.AddHistoryMessage here because the C++ side
-                    // has already done it. This was the source of the bug.
-
-                    // Update our C# database with the full conversation turn
                     var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation!.HistoryJson) ?? new List<ChatMessage>();
                     history.Add(new ChatMessage { Role = "user", Content = _pendingUserPrompt });
                     history.Add(new ChatMessage { Role = "assistant", Content = finalAssistantContent });
@@ -233,6 +239,16 @@ namespace LoQA.Services
                     ConversationList.Move(oldIndex, 0);
                 }
             }
+        }
+
+        // --- ADDED DISPOSE METHOD FOR PROPER CLEANUP ---
+        public void Dispose()
+        {
+            if (IsInitialized)
+            {
+                UnloadModelAsync().GetAwaiter().GetResult();
+            }
+            GC.SuppressFinalize(this);
         }
 
         public void StopGeneration() => _chatEngine.StopGeneration();

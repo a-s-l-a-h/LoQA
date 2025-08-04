@@ -73,35 +73,25 @@ namespace LoQA.Views
             }
         }
 
-        // --- Only this method needs to be changed ---
         private async void LoadButton_Clicked(object? sender, EventArgs e)
         {
             if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
 
-            // Step 1: Set the UI to its "loading" state
             model.IsLoading = true;
-            model.LoadingError = null; // Clear any previous errors
+            model.LoadingError = null;
 
             try
             {
-                // Step 2: Attempt to load the model
                 await _chatService.LoadModelAsync(model);
-
-                // If successful, the PropertyChanged event will handle the rest
-                // by calling LoadModelsAsync and refreshing the list.
             }
             catch (Exception ex)
             {
-                // Step 3: If it fails, set the error message on the model
                 model.LoadingError = $"Failed to load: {ex.Message}";
             }
             finally
             {
-                // Step 4: ALWAYS ensure the loading indicator is turned off
                 model.IsLoading = false;
 
-                // Manually refresh the IsActive state for all models, since the
-                // main service state might not have changed if loading failed.
                 foreach (var m in Models)
                 {
                     m.IsActive = _chatService.LoadedModel?.Id == m.Id;
@@ -110,8 +100,9 @@ namespace LoQA.Views
             }
         }
 
-        // ... (rest of the methods are unchanged) ...
-
+        // =========================================================================
+        // === MODIFIED METHOD TO PREVENT UI FREEZING DURING FILE COPY           ===
+        // =========================================================================
         private async void AddNewModel_Clicked(object? sender, EventArgs e)
         {
             try
@@ -120,7 +111,8 @@ namespace LoQA.Views
                     new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
                         { DevicePlatform.WinUI, new[] { ".gguf" } },
-                        { DevicePlatform.Android, new[] { "application/octet-stream" } },
+                        // Add "*/*" as a fallback for Android to ensure the picker opens
+                        { DevicePlatform.Android, new[] { "application/octet-stream", "*/*" } },
                         { DevicePlatform.iOS, new[] { "public.data" } },
                         { DevicePlatform.MacCatalyst, new[] { "gguf" } },
                     });
@@ -133,29 +125,51 @@ namespace LoQA.Views
 
                 if (pickResult == null) return;
 
-                var modelsDir = Path.Combine(FileSystem.AppDataDirectory, "models");
-                Directory.CreateDirectory(modelsDir);
-                var destinationPath = Path.Combine(modelsDir, pickResult.FileName);
+                // --- UI UPDATE: Show a busy indicator BEFORE starting the heavy work ---
+                StatusLabel.Text = $"Copying {pickResult.FileName}... Please wait.";
+                // In a more complex UI, you would show an ActivityIndicator here.
 
-                using var sourceStream = await pickResult.OpenReadAsync();
-                using var destinationStream = File.Create(destinationPath);
-                await sourceStream.CopyToAsync(destinationStream);
-
-                var newModel = new LlmModel
+                // --- HEAVY WORK ON BACKGROUND THREAD ---
+                // Use Task.Run to move file I/O off the UI thread.
+                var newModel = await Task.Run(async () =>
                 {
-                    Name = Path.GetFileNameWithoutExtension(pickResult.FileName),
-                    FilePath = destinationPath,
-                    SourceType = ModelSourceType.Local,
-                    IsActive = false
-                };
+                    var modelsDir = Path.Combine(FileSystem.AppDataDirectory, "models");
+                    Directory.CreateDirectory(modelsDir);
+                    var destinationPath = Path.Combine(modelsDir, pickResult.FileName);
 
+                    // This CopyToAsync operation is the cause of the UI freeze.
+                    // Now it runs safely in the background.
+                    using (var sourceStream = await pickResult.OpenReadAsync())
+                    using (var destinationStream = File.Create(destinationPath))
+                    {
+                        await sourceStream.CopyToAsync(destinationStream);
+                    }
+
+                    // Return the created model object from the background task.
+                    return new LlmModel
+                    {
+                        Name = Path.GetFileNameWithoutExtension(pickResult.FileName),
+                        FilePath = destinationPath,
+                        SourceType = ModelSourceType.Local,
+                        IsActive = false
+                    };
+                });
+
+                // --- Back on the UI thread, update the database and UI collection ---
                 await _databaseService.SaveModelAsync(newModel);
                 Models.Add(newModel);
+
+                StatusLabel.Text = "Model added successfully!";
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error adding new model: {ex.Message}");
                 await Shell.Current.DisplayAlert("Error", $"Failed to add model: {ex.Message}", "OK");
+            }
+            finally
+            {
+                // Ensure the status label is reset to a neutral state if something went wrong
+                UpdateStatusLabel();
             }
         }
 
