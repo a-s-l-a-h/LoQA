@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- FIX: Added standard MAUI XML namespace definitions -->
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
@@ -14,7 +13,19 @@
             <Button x:Name="NewChatButton" Text="+ New Chat" FontAttributes="Bold" Clicked="NewChatButton_Clicked" BackgroundColor="#007AFF" TextColor="White"/>
             <VerticalStackLayout Spacing="5">
                 <Label Text="Temperature" TextColor="White" FontAttributes="Bold"/>
-                <Slider x:Name="TemperatureSlider" Minimum="0.0" Maximum="2.0" Value="0.8" ValueChanged="TemperatureSlider_ValueChanged" />
+
+                <!-- =========================================================================
+                     === ACTION: BIND THE SLIDER'S ENABLED STATE DIRECTLY                ===
+                     ========================================================================= -->
+                <!-- The slider is now only disabled when a response is actively generating. -->
+                <!-- It remains enabled when viewing history or when the model is idle.      -->
+                <Slider x:Name="TemperatureSlider" 
+                        Minimum="0.0" 
+                        Maximum="2.0" 
+                        Value="0.8" 
+                        ValueChanged="TemperatureSlider_ValueChanged"
+                        IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"/>
+
                 <Label x:Name="TemperatureValueLabel" Text="Current: 0.8" HorizontalOptions="Center" TextColor="#CCCCCC"/>
             </VerticalStackLayout>
         </VerticalStackLayout>

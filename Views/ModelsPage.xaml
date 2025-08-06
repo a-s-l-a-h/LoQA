@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- FIX: Added standard MAUI XML namespace definitions -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
@@ -8,19 +7,14 @@
              Title="Manage Models"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
-        </ResourceDictionary>
-    </ContentPage.Resources>
+    <!-- =========================================================================
+         === ACTION: REMOVE THE LOCAL RESOURCE DICTIONARY                      ===
+         ========================================================================= -->
+    <!-- This entire <ContentPage.Resources> block is no longer needed because
+         the converter is now defined globally in App.xaml. -->
 
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="25">
-
-            <Button Text="← Back to Chat"
-                    Clicked="BackButton_Clicked"
-                    HorizontalOptions="Start"
-                    Margin="0,0,0,15"/>
 
             <Border Stroke="{StaticResource PrimaryAccentColor}" StrokeThickness="1" Padding="15">
                 <Border.StrokeShape>

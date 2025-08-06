@@ -100,9 +100,6 @@ namespace LoQA.Views
             }
         }
 
-        // =========================================================================
-        // === MODIFIED METHOD TO PREVENT UI FREEZING DURING FILE COPY           ===
-        // =========================================================================
         private async void AddNewModel_Clicked(object? sender, EventArgs e)
         {
             try
@@ -111,7 +108,6 @@ namespace LoQA.Views
                     new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
                         { DevicePlatform.WinUI, new[] { ".gguf" } },
-                        // Add "*/*" as a fallback for Android to ensure the picker opens
                         { DevicePlatform.Android, new[] { "application/octet-stream", "*/*" } },
                         { DevicePlatform.iOS, new[] { "public.data" } },
                         { DevicePlatform.MacCatalyst, new[] { "gguf" } },
@@ -125,27 +121,20 @@ namespace LoQA.Views
 
                 if (pickResult == null) return;
 
-                // --- UI UPDATE: Show a busy indicator BEFORE starting the heavy work ---
                 StatusLabel.Text = $"Copying {pickResult.FileName}... Please wait.";
-                // In a more complex UI, you would show an ActivityIndicator here.
 
-                // --- HEAVY WORK ON BACKGROUND THREAD ---
-                // Use Task.Run to move file I/O off the UI thread.
                 var newModel = await Task.Run(async () =>
                 {
                     var modelsDir = Path.Combine(FileSystem.AppDataDirectory, "models");
                     Directory.CreateDirectory(modelsDir);
                     var destinationPath = Path.Combine(modelsDir, pickResult.FileName);
 
-                    // This CopyToAsync operation is the cause of the UI freeze.
-                    // Now it runs safely in the background.
                     using (var sourceStream = await pickResult.OpenReadAsync())
                     using (var destinationStream = File.Create(destinationPath))
                     {
                         await sourceStream.CopyToAsync(destinationStream);
                     }
 
-                    // Return the created model object from the background task.
                     return new LlmModel
                     {
                         Name = Path.GetFileNameWithoutExtension(pickResult.FileName),
@@ -155,7 +144,6 @@ namespace LoQA.Views
                     };
                 });
 
-                // --- Back on the UI thread, update the database and UI collection ---
                 await _databaseService.SaveModelAsync(newModel);
                 Models.Add(newModel);
 
@@ -164,11 +152,13 @@ namespace LoQA.Views
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error adding new model: {ex.Message}");
-                await Shell.Current.DisplayAlert("Error", $"Failed to add model: {ex.Message}", "OK");
+                if (Shell.Current != null)
+                {
+                    await Shell.Current.DisplayAlert("Error", $"Failed to add model: {ex.Message}", "OK");
+                }
             }
             finally
             {
-                // Ensure the status label is reset to a neutral state if something went wrong
                 UpdateStatusLabel();
             }
         }
@@ -177,7 +167,12 @@ namespace LoQA.Views
         {
             if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
 
-            bool confirm = await Shell.Current.DisplayAlert("Delete Model?", $"Are you sure you want to delete '{model.Name}'? The file will also be removed.", "Delete", "Cancel");
+            bool confirm = false;
+            if (Shell.Current != null)
+            {
+                confirm = await Shell.Current.DisplayAlert("Delete Model?", $"Are you sure you want to delete '{model.Name}'? The file will also be removed.", "Delete", "Cancel");
+            }
+
             if (!confirm) return;
 
             try
@@ -197,7 +192,10 @@ namespace LoQA.Views
             }
             catch (Exception ex)
             {
-                await Shell.Current.DisplayAlert("Error", $"Failed to delete model: {ex.Message}", "OK");
+                if (Shell.Current != null)
+                {
+                    await Shell.Current.DisplayAlert("Error", $"Failed to delete model: {ex.Message}", "OK");
+                }
             }
         }
 
@@ -218,18 +216,18 @@ namespace LoQA.Views
             }
             catch (Exception ex)
             {
-                await Shell.Current.DisplayAlert("Error", $"Failed to unload model: {ex.Message}", "OK");
+                if (Shell.Current != null)
+                {
+                    await Shell.Current.DisplayAlert("Error", $"Failed to unload model: {ex.Message}", "OK");
+                }
                 await LoadModelsAsync();
                 UpdateStatusLabel();
             }
         }
 
-        private async void BackButton_Clicked(object? sender, EventArgs e)
-        {
-            if (Shell.Current.Navigation.NavigationStack.Count > 1)
-            {
-                await Shell.Current.GoToAsync("..");
-            }
-        }
+        // =========================================================================
+        // === ACTION: REMOVED THE BackButton_Clicked EVENT HANDLER              ===
+        // =========================================================================
+        // This method is no longer needed because the button was removed from the XAML.
     }
 }

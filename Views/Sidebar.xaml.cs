@@ -1,7 +1,7 @@
 using LoQA.Models;
 using LoQA.Services;
 using System.ComponentModel;
-using System.Linq; // Added for .FirstOrDefault()
+using System.Linq;
 
 namespace LoQA.Views
 {
@@ -13,7 +13,6 @@ namespace LoQA.Views
         public Sidebar()
         {
             InitializeComponent();
-            // The handler will be attached when the control is loaded into the UI.
             this.HandlerChanged += OnHandlerChanged;
         }
 
@@ -21,7 +20,6 @@ namespace LoQA.Views
         {
             if (Handler?.MauiContext == null)
             {
-                // Unsubscribe if the handler is being detached.
                 if (_chatService != null)
                 {
                     _chatService.PropertyChanged -= OnServicePropertyChanged;
@@ -29,7 +27,6 @@ namespace LoQA.Views
                 return;
             }
 
-            // This is the correct place to get services.
             _databaseService = Handler.MauiContext.Services.GetService<DatabaseService>();
             var newChatService = Handler.MauiContext.Services.GetService<EasyChatService>();
 
@@ -42,12 +39,16 @@ namespace LoQA.Views
 
                 _chatService = newChatService;
 
+                // =========================================================================
+                // === ACTION: CORRECTED TYPO AND NULL REFERENCE WARNING                ===
+                // =========================================================================
+                // The typo '_chatShatService' is now '_chatService'.
                 if (_chatService != null)
                 {
                     this.BindingContext = _chatService;
                     _chatService.PropertyChanged += OnServicePropertyChanged;
-                    // Load conversations on a background thread.
                     Task.Run(() => _chatService.LoadConversationsFromDbAsync());
+                    // This is also safe because we are inside the null check.
                     UpdateAllStates();
                 }
             }
@@ -61,22 +62,19 @@ namespace LoQA.Views
             TemperatureSlider.Value = currentParams.temperature;
             TemperatureValueLabel.Text = $"Current: {currentParams.temperature:F2}";
             ConversationsListView.SelectedItem = _chatService.CurrentConversation;
-            // The busy state depends on both generating and pending history loads.
-            UpdateBusyState(_chatService.IsGenerating || _chatService.IsHistoryLoadPending);
+            UpdateGenerationState(_chatService.IsGenerating);
         }
 
         private void OnServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (_chatService == null) return;
 
-            // Ensure UI updates happen on the main thread.
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 switch (e.PropertyName)
                 {
                     case nameof(EasyChatService.IsGenerating):
-                    case nameof(EasyChatService.IsHistoryLoadPending):
-                        UpdateBusyState(_chatService.IsGenerating || _chatService.IsHistoryLoadPending);
+                        UpdateGenerationState(_chatService.IsGenerating);
                         break;
                     case nameof(EasyChatService.CurrentConversation):
                         if (ConversationsListView.SelectedItem != _chatService.CurrentConversation)
@@ -88,24 +86,20 @@ namespace LoQA.Views
             });
         }
 
-        // Renamed for clarity. Disables controls when the engine is busy.
-        private void UpdateBusyState(bool isBusy)
+        private void UpdateGenerationState(bool isGenerating)
         {
-            NewChatButton.IsEnabled = !isBusy;
-            ConversationsListView.IsEnabled = !isBusy;
-            ModelsButton.IsEnabled = !isBusy;
-            SettingsButton.IsEnabled = !isBusy;
-            TemperatureSlider.IsEnabled = !isBusy;
+            ConversationsListView.IsEnabled = !isGenerating;
         }
 
-        private void NewChatButton_Clicked(object sender, EventArgs e)
+        private async void NewChatButton_Clicked(object sender, EventArgs e)
         {
             if (_chatService == null || _chatService.IsGenerating) return;
 
-            ConversationsListView.SelectedItem = null;
             _chatService.StartNewConversation();
-            if (Shell.Current is not null)
+
+            if (Shell.Current != null)
             {
+                await Shell.Current.GoToAsync("//ChatContentPage");
                 Shell.Current.FlyoutIsPresented = false;
             }
         }

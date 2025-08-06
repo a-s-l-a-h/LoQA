@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- FIX: Added standard MAUI XML namespace definitions -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
@@ -48,6 +47,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
+        <!-- Main Input Grid -->
         <Grid Grid.Row="1" 
               ColumnDefinitions="*, Auto" 
               ColumnSpacing="10" 
@@ -80,14 +80,16 @@
                     BackgroundColor="{StaticResource DestructiveColor}"/>
         </Grid>
 
-        <Button Grid.Row="1"
-                x:Name="LoadHistoryButton"
-                Text="Load History &amp; Continue Chat"
-                IsVisible="{Binding IsHistoryLoadPending}"
-                IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
-                Clicked="LoadHistoryButton_Clicked"
-                Margin="5,10,0,0"
-                HorizontalOptions="FillAndExpand"/>
+        <!-- =========================================================================
+             === ACTION: FIXED OBSOLETE FillAndExpand WARNING                      ===
+             ========================================================================= -->
+        <!-- We now wrap the button in its own Grid to make it stretch. -->
+        <Grid Grid.Row="1" Margin="5,10,0,0" IsVisible="{Binding IsHistoryLoadPending}">
+            <Button x:Name="LoadHistoryButton"
+                    Text="Load History &amp; Continue Chat"
+                    IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
+                    Clicked="LoadHistoryButton_Clicked"/>
+        </Grid>
 
         <ActivityIndicator Grid.Row="0" Grid.RowSpan="2"
                            x:Name="BusyIndicator"
