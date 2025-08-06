@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- FIX: Added standard MAUI XML namespace definitions -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
+             xmlns:converters="clr-namespace:LoQA.Converters"
              x:Class="LoQA.Views.ChatContentPage"
              Title="EasyChat"
              BackgroundColor="{StaticResource PageBackgroundColor}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <NavigationPage.TitleView>
         <Label x:Name="StatusLabel"
@@ -20,8 +28,7 @@
                         x:Name="ChatMessagesView"
                         Margin="5,0"
                         ItemsSource="{Binding CurrentMessages}"
-                        ItemsUpdatingScrollMode="KeepLastItemInView"
-                        Scrolled="ChatMessagesView_Scrolled">
+                        ItemsUpdatingScrollMode="KeepLastItemInView">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:ChatMessageViewModel">
                     <Grid Margin="5" HorizontalOptions="{Binding HorizontalAlignment}">
@@ -41,33 +48,51 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="5,10,0,0" IsEnabled="False" x:Name="InputGrid">
+        <Grid Grid.Row="1" 
+              ColumnDefinitions="*, Auto" 
+              ColumnSpacing="10" 
+              Margin="5,10,0,0" 
+              IsEnabled="{Binding CanUserInput}"
+              IsVisible="{Binding IsHistoryLoadPending, Converter={StaticResource InverseBoolConverter}}"
+              x:Name="InputGrid">
+
             <Editor Grid.Column="0"
                     x:Name="PromptEditor"
                     Placeholder="Enter your prompt here..."
                     AutoSize="TextChanges"
+                    IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
                     TextColor="{StaticResource PrimaryTextColor}"
                     PlaceholderColor="{StaticResource SecondaryTextColor}"/>
 
             <Button Grid.Column="1"
                     x:Name="SendButton"
                     Text="➤"
-                    IsVisible="True"
+                    IsVisible="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
                     Clicked="SendButton_Clicked"
                     Style="{StaticResource CircleButton}"/>
+
             <Button Grid.Column="1"
                     x:Name="StopButton"
                     Text="■"
-                    IsVisible="False"
+                    IsVisible="{Binding IsGenerating}"
                     Clicked="StopButton_Clicked"
                     Style="{StaticResource CircleButton}"
                     BackgroundColor="{StaticResource DestructiveColor}"/>
         </Grid>
 
-        <ActivityIndicator Grid.Row="0"
+        <Button Grid.Row="1"
+                x:Name="LoadHistoryButton"
+                Text="Load History &amp; Continue Chat"
+                IsVisible="{Binding IsHistoryLoadPending}"
+                IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
+                Clicked="LoadHistoryButton_Clicked"
+                Margin="5,10,0,0"
+                HorizontalOptions="FillAndExpand"/>
+
+        <ActivityIndicator Grid.Row="0" Grid.RowSpan="2"
                            x:Name="BusyIndicator"
-                           IsRunning="False"
-                           IsVisible="False"
+                           IsRunning="{Binding IsGenerating}"
+                           IsVisible="{Binding IsGenerating}"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Color="{StaticResource PrimaryAccentColor}" />

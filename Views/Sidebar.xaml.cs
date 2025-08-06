@@ -1,8 +1,7 @@
-#pragma warning disable CA1416 // Validate platform compatibility
-
 using LoQA.Models;
 using LoQA.Services;
 using System.ComponentModel;
+using System.Linq; // Added for .FirstOrDefault()
 
 namespace LoQA.Views
 {
@@ -14,6 +13,7 @@ namespace LoQA.Views
         public Sidebar()
         {
             InitializeComponent();
+            // The handler will be attached when the control is loaded into the UI.
             this.HandlerChanged += OnHandlerChanged;
         }
 
@@ -21,16 +21,24 @@ namespace LoQA.Views
         {
             if (Handler?.MauiContext == null)
             {
-                if (_chatService != null) _chatService.PropertyChanged -= OnServicePropertyChanged;
+                // Unsubscribe if the handler is being detached.
+                if (_chatService != null)
+                {
+                    _chatService.PropertyChanged -= OnServicePropertyChanged;
+                }
                 return;
             }
 
+            // This is the correct place to get services.
             _databaseService = Handler.MauiContext.Services.GetService<DatabaseService>();
             var newChatService = Handler.MauiContext.Services.GetService<EasyChatService>();
 
             if (_chatService != newChatService)
             {
-                if (_chatService != null) _chatService.PropertyChanged -= OnServicePropertyChanged;
+                if (_chatService != null)
+                {
+                    _chatService.PropertyChanged -= OnServicePropertyChanged;
+                }
 
                 _chatService = newChatService;
 
@@ -38,6 +46,7 @@ namespace LoQA.Views
                 {
                     this.BindingContext = _chatService;
                     _chatService.PropertyChanged += OnServicePropertyChanged;
+                    // Load conversations on a background thread.
                     Task.Run(() => _chatService.LoadConversationsFromDbAsync());
                     UpdateAllStates();
                 }
@@ -47,22 +56,27 @@ namespace LoQA.Views
         private void UpdateAllStates()
         {
             if (_chatService == null) return;
+
             var currentParams = _chatService.GetCurrentSamplingParams();
             TemperatureSlider.Value = currentParams.temperature;
             TemperatureValueLabel.Text = $"Current: {currentParams.temperature:F2}";
             ConversationsListView.SelectedItem = _chatService.CurrentConversation;
-            UpdateGeneratingState(_chatService.IsGenerating);
+            // The busy state depends on both generating and pending history loads.
+            UpdateBusyState(_chatService.IsGenerating || _chatService.IsHistoryLoadPending);
         }
 
         private void OnServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (_chatService == null) return;
+
+            // Ensure UI updates happen on the main thread.
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 switch (e.PropertyName)
                 {
                     case nameof(EasyChatService.IsGenerating):
-                        UpdateGeneratingState(_chatService.IsGenerating);
+                    case nameof(EasyChatService.IsHistoryLoadPending):
+                        UpdateBusyState(_chatService.IsGenerating || _chatService.IsHistoryLoadPending);
                         break;
                     case nameof(EasyChatService.CurrentConversation):
                         if (ConversationsListView.SelectedItem != _chatService.CurrentConversation)
@@ -74,29 +88,39 @@ namespace LoQA.Views
             });
         }
 
-        private void UpdateGeneratingState(bool isGenerating)
+        // Renamed for clarity. Disables controls when the engine is busy.
+        private void UpdateBusyState(bool isBusy)
         {
-            NewChatButton.IsEnabled = !isGenerating;
-            ConversationsListView.IsEnabled = !isGenerating;
-            ModelsButton.IsEnabled = !isGenerating;
-            SettingsButton.IsEnabled = !isGenerating;
-            TemperatureSlider.IsEnabled = !isGenerating;
+            NewChatButton.IsEnabled = !isBusy;
+            ConversationsListView.IsEnabled = !isBusy;
+            ModelsButton.IsEnabled = !isBusy;
+            SettingsButton.IsEnabled = !isBusy;
+            TemperatureSlider.IsEnabled = !isBusy;
         }
 
         private void NewChatButton_Clicked(object sender, EventArgs e)
         {
             if (_chatService == null || _chatService.IsGenerating) return;
+
             ConversationsListView.SelectedItem = null;
             _chatService.StartNewConversation();
-            if (Shell.Current is not null) Shell.Current.FlyoutIsPresented = false;
+            if (Shell.Current is not null)
+            {
+                Shell.Current.FlyoutIsPresented = false;
+            }
         }
 
         private async void ConversationsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_chatService == null || e.CurrentSelection.FirstOrDefault() is not ChatHistory selected) return;
-            if (_chatService.CurrentConversation?.Id == selected.Id) return;
-            await _chatService.LoadConversationAsync(selected);
-            if (Shell.Current is not null) Shell.Current.FlyoutIsPresented = false;
+            if (_chatService.CurrentConversation?.Id == selected.Id && !_chatService.IsHistoryLoadPending) return;
+
+            await _chatService.SelectConversationAsync(selected);
+
+            if (Shell.Current is not null)
+            {
+                Shell.Current.FlyoutIsPresented = false;
+            }
         }
 
         private async void DeleteButton_Clicked(object sender, EventArgs e)
@@ -123,6 +147,7 @@ namespace LoQA.Views
         {
             TemperatureValueLabel.Text = $"Current: {e.NewValue:F2}";
             if (_chatService == null || !_chatService.IsInitialized) return;
+
             var currentParams = _chatService.GetCurrentSamplingParams();
             currentParams.temperature = (float)e.NewValue;
             _chatService.UpdateSamplingParams(currentParams);
@@ -130,12 +155,18 @@ namespace LoQA.Views
 
         private async void ModelsButton_Clicked(object sender, EventArgs e)
         {
-            await Shell.Current.GoToAsync(nameof(ModelsPage));
+            if (Shell.Current != null)
+            {
+                await Shell.Current.GoToAsync(nameof(ModelsPage));
+            }
         }
 
         private async void SettingsButton_Clicked(object sender, EventArgs e)
         {
-            await Shell.Current.GoToAsync(nameof(SettingsPage));
+            if (Shell.Current != null)
+            {
+                await Shell.Current.GoToAsync(nameof(SettingsPage));
+            }
         }
     }
 

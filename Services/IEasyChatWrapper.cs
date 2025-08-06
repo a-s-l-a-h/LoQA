@@ -14,8 +14,10 @@ namespace LoQA.Services
         public int main_gpu;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
         public float[] tensor_split;
-        public byte use_mmap;
-        public byte use_mlock;
+        [MarshalAs(UnmanagedType.I1)]
+        public bool use_mmap;
+        [MarshalAs(UnmanagedType.I1)]
+        public bool use_mlock;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -27,8 +29,10 @@ namespace LoQA.Services
         public int n_threads_batch;
         public float rope_freq_base;
         public float rope_freq_scale;
-        public byte offload_kqv;
-        public byte flash_attn;
+        [MarshalAs(UnmanagedType.I1)]
+        public bool offload_kqv;
+        [MarshalAs(UnmanagedType.I1)]
+        public bool flash_attn;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -46,10 +50,13 @@ namespace LoQA.Services
         bool IsInitialized { get; }
         Task<bool> InitializeAsync(string modelPath, ChatModelParams modelParams, ChatContextParams ctxParams);
 
-        Task GenerateAsync(string prompt, int maxTokens = 4096);
+        Task<bool> GenerateAsync(string prompt, int maxTokens = 4096);
 
-        // New function to load the entire history from a JSON string in one call.
+        // This function now returns bool for better error checking.
         bool LoadFullHistory(string historyJson);
+
+        // New function to set the fallback template
+        bool SetFallbackChatTemplate(string template);
 
         void StopGeneration();
         bool UpdateSamplingParams(ChatSamplingParams newParams);
@@ -57,7 +64,7 @@ namespace LoQA.Services
         ChatModelParams GetDefaultModelParams();
         ChatContextParams GetDefaultContextParams();
         ChatSamplingParams GetDefaultSamplingParams();
-        void ClearConversation();
+        bool ClearConversation();
         string GetLastError();
     }
 }

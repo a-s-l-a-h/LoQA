@@ -40,25 +40,36 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
     private static extern void freeLlama();
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "registerTokenCallback")]
     private static extern void registerTokenCallback(TokenCallback callback);
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "generateResponse")]
-    private static extern void generateResponse([MarshalAs(UnmanagedType.LPUTF8Str)] string user_input, int max_tokens);
 
-    // P/Invoke for our new bulk-loading function
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "generateResponse")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool generateResponse([MarshalAs(UnmanagedType.LPUTF8Str)] string user_input, int max_tokens);
+
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "load_full_history")]
     [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool load_full_history_native([MarshalAs(UnmanagedType.LPUTF8Str)] string history_json);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "stopGeneration")]
     private static extern void stopGeneration_native();
+
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "update_sampling_params")]
     [return: MarshalAs(UnmanagedType.I1)]
     private static extern bool update_sampling_params_native(float temperature, float min_p, int seed);
+
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_current_sampling_params")]
     private static extern ChatSamplingParams get_current_sampling_params_native();
+
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "clearConversation")]
-    private static extern void clearConversation_native();
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool clearConversation_native();
+
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_last_error")]
     private static extern IntPtr get_last_error_native();
+
+    // NEW P/Invoke for setting the template
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "set_fallback_chat_template")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool set_fallback_chat_template_native([MarshalAs(UnmanagedType.LPUTF8Str)] string tmpl);
     #endregion
 
     #region Public Wrapper Methods
@@ -85,10 +96,14 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
         catch (Exception ex) { OnTokenReceived?.Invoke($"FATAL: An exception occurred during initialization: {ex.Message}\n"); return false; }
     }
 
-    public async Task GenerateAsync(string prompt, int maxTokens = 4096)
+    public async Task<bool> GenerateAsync(string prompt, int maxTokens = 4096)
     {
-        if (!IsInitialized) { OnTokenReceived?.Invoke("ERROR: Service is not initialized.\n"); return; }
-        await Task.Run(() => generateResponse(prompt, maxTokens));
+        if (!IsInitialized)
+        {
+            OnTokenReceived?.Invoke("ERROR: Service is not initialized.\n");
+            return false;
+        }
+        return await Task.Run(() => generateResponse(prompt, maxTokens));
     }
 
     public bool LoadFullHistory(string historyJson)
@@ -97,10 +112,16 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
         return load_full_history_native(historyJson);
     }
 
+    public bool SetFallbackChatTemplate(string template)
+    {
+        // This can be called before initialization
+        return set_fallback_chat_template_native(template);
+    }
+
     public void StopGeneration() { if (!IsInitialized) return; stopGeneration_native(); }
     public bool UpdateSamplingParams(ChatSamplingParams newParams) { if (!IsInitialized) return false; return update_sampling_params_native(newParams.temperature, newParams.min_p, newParams.seed); }
     public ChatSamplingParams GetCurrentSamplingParams() { if (!IsInitialized) return GetDefaultSamplingParams(); return get_current_sampling_params_native(); }
-    public void ClearConversation() { if (!IsInitialized) return; clearConversation_native(); }
+    public bool ClearConversation() { if (!IsInitialized) return false; return clearConversation_native(); }
     public string GetLastError() { IntPtr errorPtr = get_last_error_native(); return Marshal.PtrToStringUTF8(errorPtr) ?? "Unknown error"; }
     public void Dispose()
     {

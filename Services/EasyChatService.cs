@@ -7,9 +7,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-// =========================================================================
-// === ACTION: ADD THIS REQUIRED USING STATEMENT                       ===
-// =========================================================================
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -25,15 +22,12 @@ namespace LoQA.Services
         private ChatHistory? _currentConversation;
         private ChatMessageViewModel? _currentAssistantMessage;
         private bool _isInitialized;
+        private bool _isHistoryLoadPending;
 
-        // =========================================================================
-        // === ACTION: DEFINE SAFER JSON SERIALIZER OPTIONS                    ===
-        // =========================================================================
-        // This tells the serializer to not escape characters like apostrophes.
-        // It is perfectly safe for our use case and solves the `\u0027` bug.
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            WriteIndented = true
         };
 
         public LlmModel? LoadedModel { get; private set; }
@@ -41,8 +35,12 @@ namespace LoQA.Services
         public ObservableCollection<ChatHistory> ConversationList { get; } = new();
 
         public bool IsInitialized { get => _isInitialized; private set => SetField(ref _isInitialized, value); }
-        public bool IsGenerating { get => _isGenerating; private set => SetField(ref _isGenerating, value); }
+        public bool IsGenerating { get => _isGenerating; private set => SetField(ref _isGenerating, value, nameof(IsGenerating), nameof(CanUserInput)); }
         public ChatHistory? CurrentConversation { get => _currentConversation; private set => SetField(ref _currentConversation, value); }
+
+        public bool IsHistoryLoadPending { get => _isHistoryLoadPending; private set => SetField(ref _isHistoryLoadPending, value, nameof(IsHistoryLoadPending), nameof(CanUserInput)); }
+
+        public bool CanUserInput => IsInitialized && !IsGenerating && !IsHistoryLoadPending;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -52,6 +50,13 @@ namespace LoQA.Services
             _databaseService = databaseService;
             _chatEngine.OnTokenReceived += OnTokenReceived;
             IsInitialized = _chatEngine.IsInitialized;
+
+            // FIX: Use the full namespace to resolve ambiguity with Java.Util.Prefs.Preferences
+            string savedTemplate = Microsoft.Maui.Storage.Preferences.Get("FallbackTemplate", string.Empty);
+            if (!string.IsNullOrWhiteSpace(savedTemplate))
+            {
+                _chatEngine.SetFallbackChatTemplate(savedTemplate);
+            }
         }
 
         public async Task LoadModelAsync(LlmModel modelToLoad)
@@ -61,25 +66,31 @@ namespace LoQA.Services
             {
                 var modelParams = GetDefaultModelParams();
                 var ctxParams = GetDefaultContextParams();
-                modelParams.use_mmap = 1; modelParams.use_mlock = 0;
+                modelParams.use_mmap = true;
+                modelParams.use_mlock = false;
+
 #if ANDROID || IOS
-                ctxParams.n_ctx = 2048; modelParams.n_gpu_layers = 25;
+                ctxParams.n_ctx = 2048;
+                modelParams.n_gpu_layers = 99;
 #else
-                ctxParams.n_ctx = 4096; modelParams.n_gpu_layers = 50;
+                ctxParams.n_ctx = 4096;
+                modelParams.n_gpu_layers = 99;
 #endif
                 bool success = await _chatEngine.InitializeAsync(modelToLoad.FilePath, modelParams, ctxParams);
-                if (success) { LoadedModel = modelToLoad; IsInitialized = true; OnPropertyChanged(nameof(LoadedModel)); }
+                if (success) { LoadedModel = modelToLoad; IsInitialized = true; OnPropertyChanged(nameof(LoadedModel)); OnPropertyChanged(nameof(CanUserInput)); }
                 else { LoadedModel = null; IsInitialized = false; throw new Exception($"Failed to initialize model: {_chatEngine.GetLastError()}"); }
             }
-            catch (Exception) { LoadedModel = null; IsInitialized = false; throw; }
+            catch (Exception) { LoadedModel = null; IsInitialized = false; OnPropertyChanged(nameof(CanUserInput)); throw; }
         }
 
         public Task UnloadModelAsync()
         {
             if (!IsInitialized) return Task.CompletedTask;
             _chatEngine.Dispose();
-            LoadedModel = null; IsInitialized = false;
+            LoadedModel = null;
+            IsInitialized = false;
             OnPropertyChanged(nameof(LoadedModel));
+            OnPropertyChanged(nameof(CanUserInput));
             StartNewConversation();
             return Task.CompletedTask;
         }
@@ -91,26 +102,20 @@ namespace LoQA.Services
             foreach (var convo in conversations) { ConversationList.Add(convo); }
         }
 
-        public Task LoadConversationAsync(ChatHistory conversation)
+        public Task SelectConversationAsync(ChatHistory conversation)
         {
             CurrentConversation = conversation;
-
             CurrentMessages.Clear();
 
-            bool success = _chatEngine.LoadFullHistory(conversation.HistoryJson);
+            var history = JsonSerializer.Deserialize<List<ChatMessage>>(conversation.HistoryJson, _jsonOptions) ?? new List<ChatMessage>();
+            foreach (var message in history)
+            {
+                CurrentMessages.Add(new ChatMessageViewModel { Role = message.Role, Content = message.Content });
+            }
 
-            if (success)
-            {
-                var history = JsonSerializer.Deserialize<List<ChatMessage>>(conversation.HistoryJson, _jsonOptions) ?? new List<ChatMessage>();
-                foreach (var message in history)
-                {
-                    CurrentMessages.Add(new ChatMessageViewModel { Role = message.Role, Content = message.Content });
-                }
-            }
-            else
-            {
-                CurrentMessages.Add(new ChatMessageViewModel { Role = "assistant", Content = $"Error loading history: {_chatEngine.GetLastError()}" });
-            }
+            IsHistoryLoadPending = true;
+
+            _chatEngine.ClearConversation();
 
             OnPropertyChanged(nameof(CurrentConversation));
             return Task.CompletedTask;
@@ -121,12 +126,34 @@ namespace LoQA.Services
             CurrentConversation = null;
             CurrentMessages.Clear();
             _chatEngine.ClearConversation();
+            IsHistoryLoadPending = false;
             OnPropertyChanged(nameof(CurrentConversation));
+        }
+
+        public async Task LoadPendingHistoryIntoEngineAsync()
+        {
+            if (!IsHistoryLoadPending || CurrentConversation == null) return;
+
+            IsGenerating = true;
+            await Task.Delay(100);
+
+            bool success = await Task.Run(() => _chatEngine.LoadFullHistory(CurrentConversation.HistoryJson));
+
+            if (success)
+            {
+                IsHistoryLoadPending = false;
+            }
+            else
+            {
+                CurrentMessages.Add(new ChatMessageViewModel { Role = "assistant", Content = $"Error loading full history: {_chatEngine.GetLastError()}" });
+            }
+            IsGenerating = false;
         }
 
         public async Task SendMessageAsync(string prompt)
         {
-            if (IsGenerating || string.IsNullOrWhiteSpace(prompt) || !IsInitialized) return;
+            if (!CanUserInput || string.IsNullOrWhiteSpace(prompt)) return;
+
             try
             {
                 IsGenerating = true;
@@ -141,31 +168,56 @@ namespace LoQA.Services
                 _currentAssistantMessage = new ChatMessageViewModel { Role = "assistant", Content = "" };
                 CurrentMessages.Add(_currentAssistantMessage);
 
-                await _chatEngine.GenerateAsync(originalUserPrompt);
+                bool success = await _chatEngine.GenerateAsync(originalUserPrompt);
 
-                if (_currentAssistantMessage != null && CurrentConversation != null)
+                if (success)
                 {
-                    var finalAssistantContent = _currentAssistantMessage.Content.Trim();
-                    var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation.HistoryJson, _jsonOptions) ?? new List<ChatMessage>();
-                    history.Add(new ChatMessage { Role = "user", Content = originalUserPrompt });
-                    history.Add(new ChatMessage { Role = "assistant", Content = finalAssistantContent });
+                    if (_currentAssistantMessage != null && CurrentConversation != null)
+                    {
+                        var finalAssistantContent = _currentAssistantMessage.Content.Trim();
+                        var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation.HistoryJson, _jsonOptions) ?? new List<ChatMessage>();
+                        history.Add(new ChatMessage { Role = "user", Content = originalUserPrompt });
+                        history.Add(new ChatMessage { Role = "assistant", Content = finalAssistantContent });
 
-                    // =========================================================================
-                    // === ACTION: USE THE NEW OPTIONS WHEN SAVING THE JSON                ===
-                    // =========================================================================
-                    CurrentConversation.HistoryJson = JsonSerializer.Serialize(history, _jsonOptions);
-                    CurrentConversation.MessageCount = history.Count;
-                    await _databaseService.SaveConversationAsync(CurrentConversation);
-                    UpdateSidebar(CurrentConversation);
+                        CurrentConversation.HistoryJson = JsonSerializer.Serialize(history, _jsonOptions);
+                        CurrentConversation.MessageCount = history.Count;
+                        await _databaseService.SaveConversationAsync(CurrentConversation);
+                        UpdateSidebar(CurrentConversation);
+                    }
+                }
+                else
+                {
+                    if (_currentAssistantMessage != null)
+                    {
+                        _currentAssistantMessage.Content += $"\n\nERROR: Generation failed. {_chatEngine.GetLastError()}";
+                    }
                 }
             }
             catch (Exception ex) { Debug.WriteLine($"Error during SendMessageAsync: {ex.Message}"); }
             finally { IsGenerating = false; _currentAssistantMessage = null; }
         }
 
+        public bool SetFallbackTemplate(string template)
+        {
+            bool success = _chatEngine.SetFallbackChatTemplate(template);
+            if (success)
+            {
+                // FIX: Use the full namespace to resolve ambiguity
+                Microsoft.Maui.Storage.Preferences.Set("FallbackTemplate", template);
+            }
+            return success;
+        }
+
         private void OnTokenReceived(string token)
         {
-            if (_currentAssistantMessage != null) { MainThread.BeginInvokeOnMainThread(() => { _currentAssistantMessage.Content += token; }); }
+            if (_currentAssistantMessage != null)
+            {
+                if (token == "<EOS>")
+                {
+                    return;
+                }
+                MainThread.BeginInvokeOnMainThread(() => { _currentAssistantMessage.Content += token; });
+            }
         }
 
         private void UpdateSidebar(ChatHistory updatedConversation)
@@ -189,10 +241,15 @@ namespace LoQA.Services
         public ChatContextParams GetDefaultContextParams() => _chatEngine.GetDefaultContextParams();
         public ChatSamplingParams GetDefaultSamplingParams() => _chatEngine.GetDefaultSamplingParams();
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName)); }
-        protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null, params string[] additionalProperties)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
-            field = value; OnPropertyChanged(propertyName); return true;
+            field = value; OnPropertyChanged(propertyName);
+            foreach (var prop in additionalProperties)
+            {
+                OnPropertyChanged(prop);
+            }
+            return true;
         }
     }
 }

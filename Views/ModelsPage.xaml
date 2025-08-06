@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- FIX: Added standard MAUI XML namespace definitions -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
@@ -41,16 +42,12 @@
                                         <RoundRectangle CornerRadius="8"/>
                                     </Border.StrokeShape>
                                     <VerticalStackLayout Spacing="10">
-                                        <!-- Model Info Section (Unchanged) -->
                                         <VerticalStackLayout>
                                             <Label Text="{Binding Name}" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}"/>
                                             <Label Text="{Binding FilePath}" FontSize="Micro" TextColor="{StaticResource SecondaryTextColor}" LineBreakMode="TailTruncation"/>
                                             <Label FontSize="Small" FontAttributes="Italic" TextColor="{StaticResource PrimaryAccentColor}" IsVisible="{Binding IsActive}" Text="Loaded" />
                                         </VerticalStackLayout>
 
-                                       
-
-                                       
                                         <HorizontalStackLayout Spacing="5" HorizontalOptions="End" Margin="0,10,0,0"
                                                                IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
                                             <Button Text="Load"
@@ -70,13 +67,11 @@
                                                     HeightRequest="40"/>
                                         </HorizontalStackLayout>
 
-                                        <!-- State 2: Show Activity Indicator when loading -->
                                         <StackLayout Orientation="Horizontal" Spacing="10" Padding="10" IsVisible="{Binding IsLoading}">
                                             <ActivityIndicator IsRunning="{Binding IsLoading}" Color="{StaticResource PrimaryAccentColor}" />
                                             <Label Text="Loading model..." TextColor="{StaticResource SecondaryTextColor}" VerticalOptions="Center"/>
                                         </StackLayout>
 
-                                        <!-- State 3: Show Error Message if loading fails -->
                                         <Label Text="{Binding LoadingError}"
                                                IsVisible="{Binding HasLoadingError}"
                                                TextColor="{StaticResource DestructiveColor}"

@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- FIX: Added standard MAUI XML namespace definitions -->
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
              x:Class="LoQA.Views.Sidebar"
              BackgroundColor="#2C3E50">
 
-    <!-- This 4-row Grid is the most stable layout. -->
     <Grid RowDefinitions="Auto, Auto, *, Auto">
 
-        <!-- Top Section -->
         <VerticalStackLayout Grid.Row="0" Padding="10" Spacing="15">
             <Label Text="LoQA" FontSize="32" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center"/>
             <Button x:Name="ModelsButton" Text="Models" Clicked="ModelsButton_Clicked" BackgroundColor="#5A6772" TextColor="White"/>
@@ -20,10 +19,8 @@
             </VerticalStackLayout>
         </VerticalStackLayout>
 
-        <!-- History Label -->
         <Label Grid.Row="1" Text="History" Margin="10,20,10,5" FontSize="Small" FontAttributes="Bold" TextColor="#CCCCCC"/>
 
-        <!-- History List (Guaranteed to scroll and not crash) -->
         <CollectionView Grid.Row="2"
                         x:Name="ConversationsListView"
                         SelectionMode="Single"
@@ -53,7 +50,6 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- Bottom Button -->
         <Button Grid.Row="3"
                 x:Name="SettingsButton"
                 Text="Settings"

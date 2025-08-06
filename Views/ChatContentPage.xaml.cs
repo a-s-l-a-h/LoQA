@@ -5,98 +5,59 @@ namespace LoQA.Views
 {
     public partial class ChatContentPage : ContentPage
     {
-        // Keep a direct reference to the service
         private readonly EasyChatService _chatService;
-        private bool _isUserScrolledUp = false;
 
-        // --- MODIFICATION: INJECT THE SERVICE HERE ---
-        // The DI container will automatically provide the singleton instance of EasyChatService
         public ChatContentPage(EasyChatService chatService)
         {
             InitializeComponent();
-
-            // Store the service instance
             _chatService = chatService;
-
-            // --- THIS IS THE CRITICAL FIX ---
-            // Set the BindingContext directly. This will now trigger OnBindingContextChanged().
-            BindingContext = _chatService;
+            BindingContext = _chatService; // This is key for all bindings to work
         }
 
-        protected override void OnBindingContextChanged()
+        protected override void OnAppearing()
         {
-            base.OnBindingContextChanged();
+            base.OnAppearing();
+            _chatService.PropertyChanged += OnServicePropertyChanged;
+            UpdateStatusLabel();
+        }
 
-            // This logic is already correct, but now it will actually run.
-            if (BindingContext is EasyChatService service)
-            {
-                // Unsubscribe first to prevent duplicate subscriptions if this were ever called again
-                service.PropertyChanged -= OnServicePropertyChanged;
-                // Subscribe to future changes
-                service.PropertyChanged += OnServicePropertyChanged;
-
-                // Set the initial UI state based on the service's current state
-                if (service.IsInitialized)
-                {
-                    SetReadyState();
-                }
-                else
-                {
-                    SetUnreadyState();
-                }
-
-                UpdateGeneratingState(service.IsGenerating);
-                UpdateStatusLabel();
-            }
+        protected override void OnDisappearing()
+        {
+            base.OnDisappearing();
+            _chatService.PropertyChanged -= OnServicePropertyChanged;
         }
 
         private void OnServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (_chatService == null) return;
+
+            // Only properties that require manual UI updates should be here.
+            // Most things are handled by binding now.
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 switch (e.PropertyName)
                 {
-                    case nameof(EasyChatService.IsGenerating):
-                        UpdateGeneratingState(_chatService.IsGenerating);
-                        break;
                     case nameof(EasyChatService.CurrentConversation):
                     case nameof(EasyChatService.LoadedModel):
-                        UpdateStatusLabel();
-                        break;
+                    case nameof(EasyChatService.IsGenerating):
                     case nameof(EasyChatService.IsInitialized):
-                        if (_chatService.IsInitialized)
-                        {
-                            SetReadyState();
-                        }
-                        else
-                        {
-                            SetUnreadyState();
-                        }
+                        UpdateStatusLabel();
                         break;
                 }
             });
         }
 
-        private void UpdateGeneratingState(bool isGenerating)
-        {
-            SendButton.IsVisible = !isGenerating;
-            StopButton.IsVisible = isGenerating;
-            PromptEditor.IsEnabled = !isGenerating;
-
-            UpdateStatusLabel();
-            if (!isGenerating && _chatService != null && _chatService.IsInitialized)
-            {
-                PromptEditor.Focus();
-            }
-        }
-
         private void UpdateStatusLabel()
         {
             if (_chatService == null) return;
+
             if (_chatService.IsGenerating)
             {
                 StatusLabel.Text = "Generating...";
+            }
+            else if (_chatService.IsHistoryLoadPending)
+            {
+                StatusLabel.Text = "Previewing history. Click below to load.";
             }
             else if (_chatService.IsInitialized)
             {
@@ -112,7 +73,7 @@ namespace LoQA.Views
 
         private async void SendButton_Clicked(object sender, EventArgs e)
         {
-            if (_chatService == null || string.IsNullOrWhiteSpace(PromptEditor.Text)) return;
+            if (string.IsNullOrWhiteSpace(PromptEditor.Text)) return;
             string prompt = PromptEditor.Text.Trim();
             PromptEditor.Text = string.Empty;
             await _chatService.SendMessageAsync(prompt);
@@ -120,37 +81,13 @@ namespace LoQA.Views
 
         private void StopButton_Clicked(object sender, EventArgs e)
         {
-            _chatService?.StopGeneration();
+            _chatService.StopGeneration();
         }
 
-        private void SetUnreadyState()
+        // Event handler for the new button
+        private async void LoadHistoryButton_Clicked(object sender, EventArgs e)
         {
-            StatusLabel.Text = "No model loaded. Go to Models page.";
-            BusyIndicator.IsRunning = false;
-            BusyIndicator.IsVisible = false;
-            InputGrid.IsEnabled = false;
-        }
-
-        private void SetReadyState()
-        {
-            InputGrid.IsEnabled = true;
-            BusyIndicator.IsRunning = false;
-            BusyIndicator.IsVisible = false;
-            PromptEditor.Focus();
-            UpdateStatusLabel();
-        }
-
-        private void ChatMessagesView_Scrolled(object sender, ItemsViewScrolledEventArgs e)
-        {
-            if (_chatService == null || _chatService.CurrentMessages.Count == 0) return;
-            if (e.LastVisibleItemIndex < _chatService.CurrentMessages.Count - 2)
-            {
-                _isUserScrolledUp = true;
-            }
-            else
-            {
-                _isUserScrolledUp = false;
-            }
+            await _chatService.LoadPendingHistoryIntoEngineAsync();
         }
     }
 }
