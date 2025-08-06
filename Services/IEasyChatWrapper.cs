@@ -46,12 +46,10 @@ namespace LoQA.Services
         bool IsInitialized { get; }
         Task<bool> InitializeAsync(string modelPath, ChatModelParams modelParams, ChatContextParams ctxParams);
 
-        // The prompt is passed directly to the incremental generation function.
         Task GenerateAsync(string prompt, int maxTokens = 4096);
 
-        // New function to prime the KV cache with past messages.
-        // The C++ function is now `prime_kv_cache`.
-        bool PrimeKvCache(string role, string content);
+        // New function to load the entire history from a JSON string in one call.
+        bool LoadFullHistory(string historyJson);
 
         void StopGeneration();
         bool UpdateSamplingParams(ChatSamplingParams newParams);
