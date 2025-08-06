@@ -1,11 +1,12 @@
-﻿using LoQA.Services;
+﻿// LoQA/Services/EasyChatEngine.cs
+
+using LoQA.Services;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
 {
-    // Platform-specific library name resolution
 #if WINDOWS
     private const string DllName = "chat.dll";
 #elif ANDROID
@@ -50,8 +51,15 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "generateResponse")]
     private static extern void generateResponse(
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string prompt,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string user_input,
         int max_tokens);
+
+    // Matches the new `prime_kv_cache` C++ function
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "prime_kv_cache")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool prime_kv_cache_native(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string role,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string content);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "stopGeneration")]
     private static extern void stopGeneration_native();
@@ -63,10 +71,6 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_current_sampling_params")]
     private static extern ChatSamplingParams get_current_sampling_params_native();
 
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "add_history_message")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool add_history_message_native([MarshalAs(UnmanagedType.LPUTF8Str)] string role, [MarshalAs(UnmanagedType.LPUTF8Str)] string content);
-
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "clearConversation")]
     private static extern void clearConversation_native();
 
@@ -75,7 +79,6 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
     #endregion
 
     #region Public Wrapper Methods
-
     public ChatModelParams GetDefaultModelParams() => GetDefaultModelParams_Native();
     public ChatContextParams GetDefaultContextParams() => GetDefaultContextParams_Native();
     public ChatSamplingParams GetDefaultSamplingParams() => GetDefaultSamplingParams_Native();
@@ -121,6 +124,12 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
         await Task.Run(() => generateResponse(prompt, maxTokens));
     }
 
+    public bool PrimeKvCache(string role, string content)
+    {
+        if (!IsInitialized) return false;
+        return prime_kv_cache_native(role, content);
+    }
+
     public void StopGeneration()
     {
         if (!IsInitialized) return;
@@ -137,12 +146,6 @@ public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
     {
         if (!IsInitialized) return GetDefaultSamplingParams();
         return get_current_sampling_params_native();
-    }
-
-    public bool AddHistoryMessage(string role, string content)
-    {
-        if (!IsInitialized) return false;
-        return add_history_message_native(role, content);
     }
 
     public void ClearConversation()

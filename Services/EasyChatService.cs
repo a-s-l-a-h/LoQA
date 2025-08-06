@@ -1,6 +1,7 @@
 ﻿// File: LoQA/Services/EasyChatService.cs
 using LoQA.Models;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -19,7 +20,6 @@ namespace LoQA.Services
         private bool _isGenerating;
         private ChatHistory? _currentConversation;
         private ChatMessageViewModel? _currentAssistantMessage;
-        private string _pendingUserPrompt = string.Empty;
 
         public LlmModel? LoadedModel { get; private set; }
         public ObservableCollection<ChatMessageViewModel> CurrentMessages { get; } = new();
@@ -66,16 +66,12 @@ namespace LoQA.Services
                 var modelParams = GetDefaultModelParams();
                 var ctxParams = GetDefaultContextParams();
 
-                // =========================================================================
-                // === THE FIX: Set boolean flags using bytes (1=true, 0=false) to     ===
-                // ===          guarantee correctness for the native library.            ===
-                // =========================================================================
-                modelParams.use_mmap = 1;   // USE MEMORY MAPPING! This is essential.
-                modelParams.use_mlock = 0; // mlock can cause issues on constrained devices.
+                modelParams.use_mmap = 1;
+                modelParams.use_mlock = 0;
 
 #if ANDROID || IOS
-                ctxParams.n_ctx = 2048;        // Reduce context size from 4096 to 2048 to save RAM.
-                modelParams.n_gpu_layers = 25; // Reduce GPU layers. More layers = more VRAM usage.
+                ctxParams.n_ctx = 2048;
+                modelParams.n_gpu_layers = 25;
 #else
                 ctxParams.n_ctx = 4096;
                 modelParams.n_gpu_layers = 50;
@@ -100,7 +96,7 @@ namespace LoQA.Services
             {
                 LoadedModel = null;
                 IsInitialized = false;
-                throw; // Re-throw the exception so the UI layer can catch it.
+                throw;
             }
         }
 
@@ -132,13 +128,17 @@ namespace LoQA.Services
         {
             CurrentConversation = conversation;
             _chatEngine.ClearConversation();
-            var history = JsonSerializer.Deserialize<List<ChatMessage>>(conversation.HistoryJson) ?? new List<ChatMessage>();
             CurrentMessages.Clear();
+
+            var history = JsonSerializer.Deserialize<List<ChatMessage>>(conversation.HistoryJson) ?? new List<ChatMessage>();
+
             foreach (var message in history)
             {
-                _chatEngine.AddHistoryMessage(message.Role, message.Content);
+                // This call now adds the message to the C++ history AND processes it into the KV cache.
+                _chatEngine.PrimeKvCache(message.Role, message.Content);
                 CurrentMessages.Add(new ChatMessageViewModel { Role = message.Role, Content = message.Content });
             }
+
             OnPropertyChanged(nameof(CurrentConversation));
             return Task.CompletedTask;
         }
@@ -161,28 +161,34 @@ namespace LoQA.Services
             try
             {
                 IsGenerating = true;
-                _pendingUserPrompt = prompt;
+                string originalUserPrompt = prompt;
 
                 if (CurrentConversation == null)
                 {
                     CurrentConversation = new ChatHistory { Name = prompt.Length > 40 ? prompt[..40] + "..." : prompt, HistoryJson = "[]" };
                 }
 
-                CurrentMessages.Add(new ChatMessageViewModel { Role = "user", Content = prompt });
+                CurrentMessages.Add(new ChatMessageViewModel { Role = "user", Content = originalUserPrompt });
+
                 _currentAssistantMessage = new ChatMessageViewModel { Role = "assistant", Content = "" };
                 CurrentMessages.Add(_currentAssistantMessage);
 
-                await _chatEngine.GenerateAsync(prompt);
+                // Send the new prompt. The C++ side will handle the incremental KV cache update.
+                await _chatEngine.GenerateAsync(originalUserPrompt);
 
-                if (_currentAssistantMessage != null)
+                if (_currentAssistantMessage != null && CurrentConversation != null)
                 {
                     var finalAssistantContent = _currentAssistantMessage.Content.Trim();
-                    var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation!.HistoryJson) ?? new List<ChatMessage>();
-                    history.Add(new ChatMessage { Role = "user", Content = _pendingUserPrompt });
+
+                    // We only need to update our C# side JSON history now. C++ is already up to date.
+                    var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation.HistoryJson) ?? new List<ChatMessage>();
+                    history.Add(new ChatMessage { Role = "user", Content = originalUserPrompt });
                     history.Add(new ChatMessage { Role = "assistant", Content = finalAssistantContent });
+
                     CurrentConversation.HistoryJson = JsonSerializer.Serialize(history);
                     CurrentConversation.MessageCount = history.Count;
                     await _databaseService.SaveConversationAsync(CurrentConversation);
+
                     UpdateSidebar(CurrentConversation);
                 }
             }
@@ -194,7 +200,6 @@ namespace LoQA.Services
             {
                 IsGenerating = false;
                 _currentAssistantMessage = null;
-                _pendingUserPrompt = string.Empty;
             }
         }
 
