@@ -1,5 +1,4 @@
-﻿// File: LoQA/Services/EasyChatService.cs
-using LoQA.Models;
+﻿using LoQA.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,244 +6,383 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text.Encodings.Web;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace LoQA.Services
 {
+    public enum EngineState { UNINITIALIZED, IDLE, BUSY, IN_ERROR }
+
     public class EasyChatService : INotifyPropertyChanged, IDisposable
     {
-        private readonly IEasyChatWrapper _chatEngine;
+        private readonly EasyChatEngine _engine;
         private readonly DatabaseService _databaseService;
-
-        private bool _isGenerating;
-        private ChatHistory? _currentConversation;
         private ChatMessageViewModel? _currentAssistantMessage;
-        private bool _isInitialized;
-        private bool _isHistoryLoadPending;
 
-        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
-        {
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            WriteIndented = true
-        };
+        private EngineState _currentEngineState = EngineState.UNINITIALIZED;
+        private string _lastErrorMessage = string.Empty;
+        private ulong _currentTaskId = 0;
+        private bool _isHistoryLoadPending;
+        private bool _isLoadingHistory;
+        private bool _isGenerating;
 
         public LlmModel? LoadedModel { get; private set; }
+        public ChatHistory? CurrentConversation { get; private set; }
         public ObservableCollection<ChatMessageViewModel> CurrentMessages { get; } = new();
         public ObservableCollection<ChatHistory> ConversationList { get; } = new();
 
-        public bool IsInitialized { get => _isInitialized; private set => SetField(ref _isInitialized, value); }
-        public bool IsGenerating { get => _isGenerating; private set => SetField(ref _isGenerating, value, nameof(IsGenerating), nameof(CanUserInput)); }
-        public ChatHistory? CurrentConversation { get => _currentConversation; private set => SetField(ref _currentConversation, value); }
+        public EngineState CurrentEngineState { get => _currentEngineState; private set => SetField(ref _currentEngineState, value, nameof(CurrentEngineState), nameof(IsIdle), nameof(IsBusy), nameof(CanUserInput)); }
+        public string LastErrorMessage { get => _lastErrorMessage; private set => SetField(ref _lastErrorMessage, value); }
 
+        public bool IsGenerating { get => _isGenerating; private set => SetField(ref _isGenerating, value, nameof(IsGenerating), nameof(IsBusy), nameof(CanUserInput)); }
         public bool IsHistoryLoadPending { get => _isHistoryLoadPending; private set => SetField(ref _isHistoryLoadPending, value, nameof(IsHistoryLoadPending), nameof(CanUserInput)); }
+        public bool IsLoadingHistory { get => _isLoadingHistory; private set => SetField(ref _isLoadingHistory, value); }
 
-        public bool CanUserInput => IsInitialized && !IsGenerating && !IsHistoryLoadPending;
+        public bool IsBusy => CurrentEngineState == EngineState.BUSY && !IsGenerating && !IsLoadingHistory;
+        public bool IsIdle => CurrentEngineState == EngineState.IDLE;
+        public bool CanUserInput => CurrentEngineState == EngineState.IDLE && !IsHistoryLoadPending;
+
+        public float CurrentTemperature { get; private set; } = 0.8f;
+        public float CurrentMinP { get; private set; } = 0.1f;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public EasyChatService(IEasyChatWrapper chatEngine, DatabaseService databaseService)
+        public EasyChatService(EasyChatEngine engine, DatabaseService databaseService)
         {
-            _chatEngine = chatEngine;
+            _engine = engine;
             _databaseService = databaseService;
-            _chatEngine.OnTokenReceived += OnTokenReceived;
-            IsInitialized = _chatEngine.IsInitialized;
-
-            // FIX: Use the full namespace to resolve ambiguity with Java.Util.Prefs.Preferences
-            string savedTemplate = Microsoft.Maui.Storage.Preferences.Get("FallbackTemplate", string.Empty);
-            if (!string.IsNullOrWhiteSpace(savedTemplate))
-            {
-                _chatEngine.SetFallbackChatTemplate(savedTemplate);
-            }
+            _engine.OnTokenReceived += OnTokenReceived;
+            PollStatusAsync();
         }
 
         public async Task LoadModelAsync(LlmModel modelToLoad)
         {
-            if (IsInitialized) await UnloadModelAsync();
-            try
+            if (CurrentEngineState != EngineState.UNINITIALIZED)
             {
-                var modelParams = GetDefaultModelParams();
-                var ctxParams = GetDefaultContextParams();
-                modelParams.use_mmap = true;
-                modelParams.use_mlock = false;
-
-#if ANDROID || IOS
-                ctxParams.n_ctx = 2048;
-                modelParams.n_gpu_layers = 99;
-#else
-                ctxParams.n_ctx = 4096;
-                modelParams.n_gpu_layers = 99;
-#endif
-                bool success = await _chatEngine.InitializeAsync(modelToLoad.FilePath, modelParams, ctxParams);
-                if (success) { LoadedModel = modelToLoad; IsInitialized = true; OnPropertyChanged(nameof(LoadedModel)); OnPropertyChanged(nameof(CanUserInput)); }
-                else { LoadedModel = null; IsInitialized = false; throw new Exception($"Failed to initialize model: {_chatEngine.GetLastError()}"); }
+                await UnloadModelAsync();
             }
-            catch (Exception) { LoadedModel = null; IsInitialized = false; OnPropertyChanged(nameof(CanUserInput)); throw; }
+
+            CurrentTemperature = modelToLoad.CustomTemperature ?? 0.8f;
+            CurrentMinP = modelToLoad.CustomMinP ?? 0.1f;
+            OnPropertyChanged(nameof(CurrentTemperature));
+            OnPropertyChanged(nameof(CurrentMinP));
+
+            var commandParams = new Dictionary<string, string>
+            {
+                { "command", "initialize" },
+                { "model_path", modelToLoad.FilePath },
+                { "n_ctx", (modelToLoad.CustomCtx ?? 4096).ToString() },
+                { "n_gpu_layers", (modelToLoad.CustomGpuLayers ?? 99).ToString() },
+                { "temperature", CurrentTemperature.ToString("F2") },
+                { "min_p", CurrentMinP.ToString("F2") }
+            };
+
+            string command = BuildCommandString(commandParams);
+            var response = _engine.InvokeCommand(command);
+
+            if (response.TryGetValue("status", out var status) && status.GetString() == "QUEUED")
+            {
+                LoadedModel = modelToLoad;
+                OnPropertyChanged(nameof(LoadedModel));
+                await PollUntilIdleOrErrorAsync(response);
+            }
+            else
+            {
+                HandleErrorResponse(response);
+            }
         }
 
         public Task UnloadModelAsync()
         {
-            if (!IsInitialized) return Task.CompletedTask;
-            _chatEngine.Dispose();
+            if (CurrentEngineState == EngineState.UNINITIALIZED) return Task.CompletedTask;
+            AbortCurrentTask();
+            _engine.InvokeCommand("command=free");
+            PollStatusAsync();
             LoadedModel = null;
-            IsInitialized = false;
             OnPropertyChanged(nameof(LoadedModel));
-            OnPropertyChanged(nameof(CanUserInput));
             StartNewConversation();
             return Task.CompletedTask;
-        }
-
-        public async Task LoadConversationsFromDbAsync()
-        {
-            var conversations = await _databaseService.ListConversationsAsync();
-            ConversationList.Clear();
-            foreach (var convo in conversations) { ConversationList.Add(convo); }
-        }
-
-        public Task SelectConversationAsync(ChatHistory conversation)
-        {
-            CurrentConversation = conversation;
-            CurrentMessages.Clear();
-
-            var history = JsonSerializer.Deserialize<List<ChatMessage>>(conversation.HistoryJson, _jsonOptions) ?? new List<ChatMessage>();
-            foreach (var message in history)
-            {
-                CurrentMessages.Add(new ChatMessageViewModel { Role = message.Role, Content = message.Content });
-            }
-
-            IsHistoryLoadPending = true;
-
-            _chatEngine.ClearConversation();
-
-            OnPropertyChanged(nameof(CurrentConversation));
-            return Task.CompletedTask;
-        }
-
-        public void StartNewConversation()
-        {
-            CurrentConversation = null;
-            CurrentMessages.Clear();
-            _chatEngine.ClearConversation();
-            IsHistoryLoadPending = false;
-            OnPropertyChanged(nameof(CurrentConversation));
-        }
-
-        public async Task LoadPendingHistoryIntoEngineAsync()
-        {
-            if (!IsHistoryLoadPending || CurrentConversation == null) return;
-
-            IsGenerating = true;
-            await Task.Delay(100);
-
-            bool success = await Task.Run(() => _chatEngine.LoadFullHistory(CurrentConversation.HistoryJson));
-
-            if (success)
-            {
-                IsHistoryLoadPending = false;
-            }
-            else
-            {
-                CurrentMessages.Add(new ChatMessageViewModel { Role = "assistant", Content = $"Error loading full history: {_chatEngine.GetLastError()}" });
-            }
-            IsGenerating = false;
         }
 
         public async Task SendMessageAsync(string prompt)
         {
             if (!CanUserInput || string.IsNullOrWhiteSpace(prompt)) return;
 
-            try
+            IsGenerating = true;
+
+            var userMessageVm = new ChatMessageViewModel { Role = "user", Content = prompt };
+            CurrentMessages.Add(userMessageVm);
+
+            if (CurrentConversation == null)
             {
-                IsGenerating = true;
-                string originalUserPrompt = prompt;
+                CurrentConversation = new ChatHistory { Name = prompt.Length > 40 ? prompt[..40] + "..." : prompt };
+            }
 
-                if (CurrentConversation == null)
+            _currentAssistantMessage = new ChatMessageViewModel { Role = "assistant", Content = "" };
+            CurrentMessages.Add(_currentAssistantMessage);
+
+            var command = $"command=generate&user_input={HttpUtility.UrlEncode(prompt)}";
+            var response = _engine.InvokeCommand(command);
+
+            if (response.TryGetValue("status", out var status) && status.GetString() == "QUEUED")
+            {
+                await PollUntilIdleOrErrorAsync(response);
+                if (_currentAssistantMessage != null)
                 {
-                    CurrentConversation = new ChatHistory { Name = prompt.Length > 40 ? prompt[..40] + "..." : prompt, HistoryJson = "[]" };
-                }
-
-                CurrentMessages.Add(new ChatMessageViewModel { Role = "user", Content = originalUserPrompt });
-                _currentAssistantMessage = new ChatMessageViewModel { Role = "assistant", Content = "" };
-                CurrentMessages.Add(_currentAssistantMessage);
-
-                bool success = await _chatEngine.GenerateAsync(originalUserPrompt);
-
-                if (success)
-                {
-                    if (_currentAssistantMessage != null && CurrentConversation != null)
-                    {
-                        var finalAssistantContent = _currentAssistantMessage.Content.Trim();
-                        var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation.HistoryJson, _jsonOptions) ?? new List<ChatMessage>();
-                        history.Add(new ChatMessage { Role = "user", Content = originalUserPrompt });
-                        history.Add(new ChatMessage { Role = "assistant", Content = finalAssistantContent });
-
-                        CurrentConversation.HistoryJson = JsonSerializer.Serialize(history, _jsonOptions);
-                        CurrentConversation.MessageCount = history.Count;
-                        await _databaseService.SaveConversationAsync(CurrentConversation);
-                        UpdateSidebar(CurrentConversation);
-                    }
-                }
-                else
-                {
-                    if (_currentAssistantMessage != null)
-                    {
-                        _currentAssistantMessage.Content += $"\n\nERROR: Generation failed. {_chatEngine.GetLastError()}";
-                    }
+                    await FinalizeAndSaveConversation(prompt, _currentAssistantMessage.Content);
                 }
             }
-            catch (Exception ex) { Debug.WriteLine($"Error during SendMessageAsync: {ex.Message}"); }
-            finally { IsGenerating = false; _currentAssistantMessage = null; }
+            else
+            {
+                HandleErrorResponse(response);
+            }
+            _currentAssistantMessage = null;
         }
 
-        public bool SetFallbackTemplate(string template)
+        public async Task SelectConversationAsync(ChatHistory conversation)
         {
-            bool success = _chatEngine.SetFallbackChatTemplate(template);
-            if (success)
+            AbortCurrentTask();
+            _engine.InvokeCommand("command=clear_context");
+
+            CurrentConversation = conversation;
+            OnPropertyChanged(nameof(CurrentConversation));
+
+            CurrentMessages.Clear();
+            var historyList = JsonSerializer.Deserialize<List<ChatMessage>>(conversation.HistoryJson) ?? new List<ChatMessage>();
+            foreach (var message in historyList)
             {
-                // FIX: Use the full namespace to resolve ambiguity
-                Microsoft.Maui.Storage.Preferences.Set("FallbackTemplate", template);
+                CurrentMessages.Add(new ChatMessageViewModel { Role = message.Role, Content = message.Content });
             }
-            return success;
+
+            IsHistoryLoadPending = true;
+            await PollStatusAsync();
+        }
+
+        public async Task LoadPendingHistoryIntoEngineAsync()
+        {
+            if (!IsHistoryLoadPending || CurrentConversation == null) return;
+
+            IsLoadingHistory = true;
+
+            string customHistoryFormat = ConvertJsonHistoryToCustomFormat(CurrentConversation.HistoryJson);
+            var command = $"command=load_history&history_text={HttpUtility.UrlEncode(customHistoryFormat)}";
+            var response = _engine.InvokeCommand(command);
+
+            if (response.TryGetValue("status", out var status) && status.GetString() == "QUEUED")
+            {
+                await PollUntilIdleOrErrorAsync(response);
+                if (CurrentEngineState == EngineState.IDLE)
+                {
+                    IsHistoryLoadPending = false;
+                }
+            }
+            else
+            {
+                HandleErrorResponse(response);
+            }
+            IsLoadingHistory = false;
+        }
+
+        public void StartNewConversation()
+        {
+            AbortCurrentTask();
+            _engine.InvokeCommand("command=clear_context");
+            CurrentConversation = null;
+            CurrentMessages.Clear();
+            OnPropertyChanged(nameof(CurrentConversation));
+
+            IsHistoryLoadPending = false;
+            IsLoadingHistory = false;
+            IsGenerating = false;
+
+            PollStatusAsync();
+        }
+
+        public void AbortCurrentTask()
+        {
+            if (CurrentEngineState == EngineState.BUSY && _currentTaskId > 0)
+            {
+                _engine.InvokeCommand($"command=abort&task_id={_currentTaskId}");
+            }
+        }
+
+        public void UpdateSamplingParams(float temp, float minP)
+        {
+            if (!IsIdle) return;
+            var command = $"command=set_parameters&temperature={temp:F2}&min_p={minP:F2}";
+            _engine.InvokeCommand(command);
+
+            CurrentTemperature = temp;
+            CurrentMinP = minP;
+            OnPropertyChanged(nameof(CurrentTemperature));
+            OnPropertyChanged(nameof(CurrentMinP));
+        }
+
+        private async Task PollUntilIdleOrErrorAsync(Dictionary<string, JsonElement> initialResponse)
+        {
+            if (initialResponse.TryGetValue("task_id", out var idElement) && idElement.TryGetUInt64(out var taskId))
+            {
+                _currentTaskId = taskId;
+            }
+
+            await PollStatusAsync();
+
+            while (CurrentEngineState == EngineState.BUSY)
+            {
+                await Task.Delay(200);
+                await PollStatusAsync();
+            }
+
+            _currentTaskId = 0;
+        }
+
+        private Task PollStatusAsync()
+        {
+            var statusResponse = _engine.InvokeCommand("command=get_status");
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                UpdateStateFromResponse(statusResponse);
+            });
+            return Task.CompletedTask;
+        }
+
+        private void UpdateStateFromResponse(Dictionary<string, JsonElement> response)
+        {
+            if (!response.TryGetValue("state", out var stateElement))
+            {
+                CurrentEngineState = EngineState.IN_ERROR;
+                LastErrorMessage = "Invalid status response from engine.";
+                return;
+            }
+
+            var previousState = CurrentEngineState;
+            CurrentEngineState = stateElement.GetString() switch
+            {
+                "UNINITIALIZED" => EngineState.UNINITIALIZED,
+                "IDLE" => EngineState.IDLE,
+                "BUSY" => EngineState.BUSY,
+                "ERROR" => EngineState.IN_ERROR,
+                _ => EngineState.IN_ERROR
+            };
+
+            if (CurrentEngineState == EngineState.IN_ERROR && response.TryGetValue("message", out var msgElement))
+            {
+                LastErrorMessage = msgElement.GetString() ?? "Unknown error.";
+            }
+            else
+            {
+                LastErrorMessage = string.Empty;
+            }
+
+            if (previousState == EngineState.BUSY && CurrentEngineState != EngineState.BUSY)
+            {
+                if (IsGenerating) IsGenerating = false;
+                if (IsLoadingHistory) IsLoadingHistory = false;
+            }
+        }
+
+        private void HandleErrorResponse(Dictionary<string, JsonElement> response)
+        {
+            CurrentEngineState = EngineState.IN_ERROR;
+            if (response.TryGetValue("message", out var message))
+            {
+                LastErrorMessage = message.GetString() ?? "An unknown error occurred.";
+            }
+            Debug.WriteLine($"Engine Error: {LastErrorMessage}");
+        }
+
+        public async Task LoadConversationsFromDbAsync()
+        {
+            var conversations = await _databaseService.ListConversationsAsync();
+            ConversationList.Clear();
+            foreach (var convo in conversations)
+            {
+                ConversationList.Add(convo);
+            }
+        }
+
+        private async Task FinalizeAndSaveConversation(string userPrompt, string assistantResponse)
+        {
+            if (CurrentConversation == null) return;
+
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var history = JsonSerializer.Deserialize<List<ChatMessage>>(CurrentConversation.HistoryJson, options) ?? new List<ChatMessage>();
+            history.Add(new ChatMessage { Role = "user", Content = userPrompt });
+            history.Add(new ChatMessage { Role = "assistant", Content = assistantResponse.Trim() });
+
+            CurrentConversation.HistoryJson = JsonSerializer.Serialize(history, options);
+            CurrentConversation.MessageCount = history.Count;
+            await _databaseService.SaveConversationAsync(CurrentConversation);
+
+            UpdateSidebar(CurrentConversation);
+        }
+
+        private string ConvertJsonHistoryToCustomFormat(string jsonHistory)
+        {
+            var messages = JsonSerializer.Deserialize<List<ChatMessage>>(jsonHistory) ?? new List<ChatMessage>();
+            StringBuilder sb = new();
+            foreach (var msg in messages)
+            {
+                string roleTag = msg.Role.ToUpper() == "USER" ? "[EASYCHAT_USER]" : "[EASYCHAT_ASSISTANT]";
+                sb.AppendLine(roleTag);
+                sb.AppendLine(msg.Content);
+                sb.AppendLine("[EASYCHAT_MSG_END]");
+            }
+            return sb.ToString();
+        }
+
+        private void UpdateSidebar(ChatHistory updatedConversation)
+        {
+            var existing = ConversationList.FirstOrDefault(c => c.Id == updatedConversation.Id);
+            if (existing == null)
+            {
+                ConversationList.Insert(0, updatedConversation);
+            }
+            else
+            {
+                existing.Name = updatedConversation.Name;
+                existing.LastModified = updatedConversation.LastModified;
+                int oldIndex = ConversationList.IndexOf(existing);
+                if (oldIndex != 0)
+                {
+                    ConversationList.Move(oldIndex, 0);
+                }
+            }
+        }
+
+        private string BuildCommandString(Dictionary<string, string> parameters)
+        {
+            var parts = parameters.Select(kvp => $"{kvp.Key}={HttpUtility.UrlEncode(kvp.Value)}");
+            return string.Join("&", parts);
         }
 
         private void OnTokenReceived(string token)
         {
             if (_currentAssistantMessage != null)
             {
-                if (token == "<EOS>")
-                {
-                    return;
-                }
+                if (token is "<EOS>" or "<STOPPED>") return;
                 MainThread.BeginInvokeOnMainThread(() => { _currentAssistantMessage.Content += token; });
             }
         }
 
-        private void UpdateSidebar(ChatHistory updatedConversation)
+        public void Dispose()
         {
-            var existing = ConversationList.FirstOrDefault(c => c.Id == updatedConversation.Id);
-            if (existing == null) { ConversationList.Insert(0, updatedConversation); }
-            else
-            {
-                existing.Name = updatedConversation.Name;
-                existing.LastModified = updatedConversation.LastModified;
-                int oldIndex = ConversationList.IndexOf(existing);
-                if (oldIndex != 0) { ConversationList.Move(oldIndex, 0); }
-            }
+            _engine.Dispose();
+            GC.SuppressFinalize(this);
         }
 
-        public void Dispose() { if (IsInitialized) { UnloadModelAsync().GetAwaiter().GetResult(); } GC.SuppressFinalize(this); }
-        public void StopGeneration() => _chatEngine.StopGeneration();
-        public void UpdateSamplingParams(ChatSamplingParams newParams) => _chatEngine.UpdateSamplingParams(newParams);
-        public ChatSamplingParams GetCurrentSamplingParams() => _chatEngine.GetCurrentSamplingParams();
-        public ChatModelParams GetDefaultModelParams() => _chatEngine.GetDefaultModelParams();
-        public ChatContextParams GetDefaultContextParams() => _chatEngine.GetDefaultContextParams();
-        public ChatSamplingParams GetDefaultSamplingParams() => _chatEngine.GetDefaultSamplingParams();
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName)); }
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
         protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null, params string[] additionalProperties)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
-            field = value; OnPropertyChanged(propertyName);
+            field = value;
+            OnPropertyChanged(propertyName);
             foreach (var prop in additionalProperties)
             {
                 OnPropertyChanged(prop);

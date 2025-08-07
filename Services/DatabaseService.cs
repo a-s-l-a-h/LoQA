@@ -1,8 +1,7 @@
-﻿// Services/DatabaseService.cs
-
-using LoQA.Models;
+﻿using LoQA.Models;
 using SQLite;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -12,38 +11,29 @@ namespace LoQA.Services
     {
         private SQLiteAsyncConnection? _connection;
 
-        // Establishes connection and creates tables if they don't exist.
         public async Task InitAsync()
         {
             if (_connection != null)
                 return;
 
             var databasePath = Path.Combine(FileSystem.AppDataDirectory, "ChatSessions.db3");
+            Debug.WriteLine($"DATABASE PATH: {databasePath}");
+
             _connection = new SQLiteAsyncConnection(databasePath);
             await _connection.CreateTableAsync<ChatHistory>();
-            // Add this line to create the model table
             await _connection.CreateTableAsync<LlmModel>();
         }
 
-        // Retrieves a list of all conversations, ordered by the most recently modified.
         public async Task<List<ChatHistory>> ListConversationsAsync()
         {
             await InitAsync();
             return await _connection!.Table<ChatHistory>().OrderByDescending(ch => ch.LastModified).ToListAsync();
         }
 
-        // Loads a single conversation by its unique ID.
-        public async Task<ChatHistory?> GetConversationAsync(int id)
-        {
-            await InitAsync();
-            return await _connection!.Table<ChatHistory>().Where(ch => ch.Id == id).FirstOrDefaultAsync();
-        }
-
-        // Saves a conversation (either by inserting a new one or updating an existing one).
         public async Task<int> SaveConversationAsync(ChatHistory chat)
         {
             await InitAsync();
-            chat.LastModified = DateTime.UtcNow; // Always update the timestamp
+            chat.LastModified = DateTime.UtcNow;
 
             if (chat.Id != 0)
             {
@@ -56,14 +46,11 @@ namespace LoQA.Services
             }
         }
 
-        // Deletes a conversation from the database by its ID.
         public async Task<int> DeleteConversationAsync(int id)
         {
             await InitAsync();
             return await _connection!.DeleteAsync<ChatHistory>(id);
         }
-
-        // --- NEW METHODS FOR LLMMODEL ---
 
         public async Task<List<LlmModel>> GetModelsAsync()
         {
@@ -88,15 +75,6 @@ namespace LoQA.Services
         {
             await InitAsync();
             return await _connection!.DeleteAsync<LlmModel>(id);
-        }
-
-        public async Task SetActiveModelAsync(int modelId)
-        {
-            await InitAsync();
-            // Deactivate all other models
-            await _connection!.ExecuteAsync("UPDATE llm_models SET IsActive = 0");
-            // Activate the selected model
-            await _connection!.ExecuteAsync("UPDATE llm_models SET IsActive = 1 WHERE Id = ?", modelId);
         }
     }
 }

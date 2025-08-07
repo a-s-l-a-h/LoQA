@@ -11,7 +11,7 @@ namespace LoQA.Views
         {
             InitializeComponent();
             _chatService = chatService;
-            BindingContext = _chatService; // This is key for all bindings to work
+            BindingContext = _chatService;
         }
 
         protected override void OnAppearing()
@@ -29,28 +29,21 @@ namespace LoQA.Views
 
         private void OnServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_chatService == null) return;
-
-            // Only properties that require manual UI updates should be here.
-            // Most things are handled by binding now.
-            MainThread.BeginInvokeOnMainThread(() =>
+            switch (e.PropertyName)
             {
-                switch (e.PropertyName)
-                {
-                    case nameof(EasyChatService.CurrentConversation):
-                    case nameof(EasyChatService.LoadedModel):
-                    case nameof(EasyChatService.IsGenerating):
-                    case nameof(EasyChatService.IsInitialized):
-                        UpdateStatusLabel();
-                        break;
-                }
-            });
+                case nameof(EasyChatService.CurrentEngineState):
+                case nameof(EasyChatService.CurrentConversation):
+                case nameof(EasyChatService.LoadedModel):
+                case nameof(EasyChatService.LastErrorMessage):
+                case nameof(EasyChatService.IsGenerating):
+                case nameof(EasyChatService.IsHistoryLoadPending):
+                    MainThread.BeginInvokeOnMainThread(UpdateStatusLabel);
+                    break;
+            }
         }
 
         private void UpdateStatusLabel()
         {
-            if (_chatService == null) return;
-
             if (_chatService.IsGenerating)
             {
                 StatusLabel.Text = "Generating...";
@@ -59,15 +52,23 @@ namespace LoQA.Views
             {
                 StatusLabel.Text = "Previewing history. Click below to load.";
             }
-            else if (_chatService.IsInitialized)
+            else if (_chatService.CurrentEngineState == EngineState.IDLE)
             {
                 var modelName = _chatService.LoadedModel?.Name ?? "Active";
                 var chatName = _chatService.CurrentConversation?.Name ?? "New Chat";
                 StatusLabel.Text = $"{chatName} ({modelName})";
             }
-            else
+            else if (_chatService.CurrentEngineState == EngineState.UNINITIALIZED)
             {
                 StatusLabel.Text = "No model loaded. Go to Models page.";
+            }
+            else if (_chatService.CurrentEngineState == EngineState.IN_ERROR)
+            {
+                StatusLabel.Text = $"Error: {_chatService.LastErrorMessage}";
+            }
+            else
+            {
+                StatusLabel.Text = $"State: {_chatService.CurrentEngineState}";
             }
         }
 
@@ -81,10 +82,9 @@ namespace LoQA.Views
 
         private void StopButton_Clicked(object sender, EventArgs e)
         {
-            _chatService.StopGeneration();
+            _chatService.AbortCurrentTask();
         }
 
-        // Event handler for the new button
         private async void LoadHistoryButton_Clicked(object sender, EventArgs e)
         {
             await _chatService.LoadPendingHistoryIntoEngineAsync();

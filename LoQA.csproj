@@ -185,13 +185,23 @@
 		-->
 	</ItemGroup>
 
-	<!-- WINDOWS NATIVE LIBRARIES -->
+	<!-- ===================================================================== -->
+	<!-- WINDOWS NATIVE LIBRARIES (CORRECTED)                                  -->
+	<!-- ===================================================================== -->
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<!-- Assuming x64 for Windows; add x86 if needed and files exist -->
-		<Content Include="Platforms\Windows\libs\x64\chat.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\chat.dll')">
+		<!-- Assuming x64 for Windows -->
+
+		<!-- 
+      FIX: Correctly include easychatengine.dll.
+      The EXISTS condition now points to the correct file.
+      The <Link> tag now uses the correct filename.
+    -->
+		<Content Include="Platforms\Windows\libs\x64\easychatengine.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\easychatengine.dll')">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Link>chat.dll</Link>
+			<Link>easychatengine.dll</Link>
 		</Content>
+
+		<!-- These are the dependencies for easychatengine.dll and must also be copied -->
 		<Content Include="Platforms\Windows\libs\x64\llama.dll" Condition="$(RuntimeIdentifier.Contains('x64')) AND EXISTS('Platforms\Windows\libs\x64\llama.dll')">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Link>llama.dll</Link>
@@ -208,14 +218,6 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<Link>ggml-cpu.dll</Link>
 		</Content>
-		<!-- Add x86 versions if you have them and need to support x86 Windows -->
-		<!--
-		<Content Include="Platforms\Windows\libs\x86\chat.dll" Condition="$(RuntimeIdentifier.Contains('x86')) AND EXISTS('Platforms\Windows\libs\x86\chat.dll')">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<Link>chat.dll</Link>
-		</Content>
-		... etc for other x86 DLLs ...
-		-->
 	</ItemGroup>
 
 	<!-- TIZEN NATIVE LIBRARIES (Placeholder) -->
@@ -274,10 +276,6 @@
 	<!-- ===================================================================== -->
 	<!-- === ACTION: ADD THIS ITEMGROUP FOR THE LINKER CONFIG              === -->
 	<!-- ===================================================================== -->
-	<ItemGroup>
-		<!-- This tells the build system to use our linker configuration file. -->
-		<LinkDescription Include="linker.xml" />
-	</ItemGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
 		<!-- ... other properties ... -->
 

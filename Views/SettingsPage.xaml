@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- FIX: Added standard MAUI XML namespace definitions -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="LoQA.Views.SettingsPage"
@@ -8,38 +7,18 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="25">
 
-            <Button Text="← Back to Chat"
-                    Clicked="BackButton_Clicked"
-                    HorizontalOptions="Start"
-                    Margin="0,0,0,15"/>
-
-            <Label Text="General Settings"
+            <Label Text="Application Settings"
                    FontSize="Large"
                    FontAttributes="Bold"
                    VerticalOptions="Center" 
                    HorizontalOptions="Center" />
 
-            <Border Stroke="{StaticResource PrimaryAccentColor}" StrokeThickness="1" Padding="15">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="10"/>
-                </Border.StrokeShape>
-                <VerticalStackLayout Spacing="10">
-                    <Label FontAttributes="Bold" FontSize="Medium" Text="Fallback Chat Template"/>
-                    <Label FontSize="Small" TextColor="{StaticResource SecondaryTextColor}"
-                           Text="This is used if the loaded model does not have a template. Uses Llama-3 format by default. Use {{user_message}} as the placeholder for user input."
-                           LineBreakMode="WordWrap"/>
-                    <Editor x:Name="TemplateEditor"
-                            HeightRequest="200"
-                            AutoSize="Disabled"
-                            Placeholder="e.g., USER: {{user_message}}&#x0a;ASSISTANT:"/>
-                    <Button Text="Save Template" Clicked="SaveTemplate_Clicked"/>
-                    <Label x:Name="TemplateStatusLabel" TextColor="{StaticResource PrimaryAccentColor}" HorizontalOptions="Center"/>
-                </VerticalStackLayout>
-            </Border>
+            <!-- The fallback template editor has been removed -->
 
             <Label Text="This page is a placeholder for future application settings."
                    VerticalOptions="Center" 
-                   HorizontalOptions="Center" />
+                   HorizontalOptions="Center"
+                   Margin="0,50,0,0" />
 
         </VerticalStackLayout>
     </ScrollView>

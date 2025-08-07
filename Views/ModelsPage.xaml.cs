@@ -1,3 +1,4 @@
+// Views/ModelsPage.xaml.cs
 using LoQA.Models;
 using LoQA.Services;
 using System.Collections.ObjectModel;
@@ -18,25 +19,25 @@ namespace LoQA.Views
             _databaseService = databaseService;
             _chatService = chatService;
             ModelsListView.ItemsSource = Models;
+
+            _chatService.PropertyChanged += OnChatServicePropertyChanged;
         }
 
-        protected override void OnAppearing()
+        protected override async void OnAppearing()
         {
             base.OnAppearing();
-            _chatService.PropertyChanged += OnChatServicePropertyChanged;
-            Task.Run(LoadModelsAsync);
+            await LoadModelsAsync();
             UpdateStatusLabel();
         }
 
         protected override void OnDisappearing()
         {
             base.OnDisappearing();
-            _chatService.PropertyChanged -= OnChatServicePropertyChanged;
         }
 
         private void OnChatServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is nameof(EasyChatService.IsInitialized) or nameof(EasyChatService.LoadedModel))
+            if (e.PropertyName is nameof(EasyChatService.CurrentEngineState) or nameof(EasyChatService.LoadedModel))
             {
                 MainThread.BeginInvokeOnMainThread(async () =>
                 {
@@ -50,26 +51,55 @@ namespace LoQA.Views
         {
             var modelsFromDb = await _databaseService.GetModelsAsync();
 
-            MainThread.BeginInvokeOnMainThread(() =>
+            foreach (var dbModel in modelsFromDb)
             {
-                Models.Clear();
-                foreach (var model in modelsFromDb)
+                var existingModel = Models.FirstOrDefault(m => m.Id == dbModel.Id);
+                if (existingModel != null)
                 {
-                    model.IsActive = _chatService.LoadedModel?.Id == model.Id;
-                    Models.Add(model);
+                    existingModel.Name = dbModel.Name;
+                    existingModel.FilePath = dbModel.FilePath;
+                    existingModel.CustomCtx = dbModel.CustomCtx;
+                    existingModel.CustomGpuLayers = dbModel.CustomGpuLayers;
+                    existingModel.CustomTemperature = dbModel.CustomTemperature;
+                    existingModel.CustomMinP = dbModel.CustomMinP;
+                    existingModel.CustomChatTemplate = dbModel.CustomChatTemplate; // Update template field
+                    existingModel.IsActive = _chatService.LoadedModel?.Id == dbModel.Id;
                 }
-            });
+                else
+                {
+                    dbModel.IsActive = _chatService.LoadedModel?.Id == dbModel.Id;
+                    Models.Add(dbModel);
+                }
+            }
+            var modelsToRemove = Models.Where(m => !modelsFromDb.Any(db => db.Id == m.Id)).ToList();
+            foreach (var modelToRemove in modelsToRemove)
+            {
+                Models.Remove(modelToRemove);
+            }
         }
 
         private void UpdateStatusLabel()
         {
-            if (_chatService.IsInitialized && _chatService.LoadedModel != null)
+            if (_chatService.LoadedModel != null && _chatService.CurrentEngineState != EngineState.UNINITIALIZED)
             {
-                StatusLabel.Text = $"Loaded: {_chatService.LoadedModel.Name}";
+                StatusLabel.Text = $"Loaded: {_chatService.LoadedModel.Name} (State: {_chatService.CurrentEngineState})";
             }
             else
             {
-                StatusLabel.Text = "No model is currently loaded.";
+                StatusLabel.Text = $"No model loaded. (State: {_chatService.CurrentEngineState})";
+            }
+            if (_chatService.CurrentEngineState == EngineState.IN_ERROR)
+            {
+                StatusLabel.Text += $"\nError: {_chatService.LastErrorMessage}";
+                StatusLabel.TextColor = Colors.Red;
+            }
+            else
+            {
+                var secondaryTextColor = Application.Current?.Resources["SecondaryTextColor"];
+                if (secondaryTextColor is Color color)
+                {
+                    StatusLabel.TextColor = color;
+                }
             }
         }
 
@@ -83,6 +113,10 @@ namespace LoQA.Views
             try
             {
                 await _chatService.LoadModelAsync(model);
+                if (_chatService.CurrentEngineState == EngineState.IN_ERROR)
+                {
+                    throw new Exception(_chatService.LastErrorMessage);
+                }
             }
             catch (Exception ex)
             {
@@ -91,14 +125,87 @@ namespace LoQA.Views
             finally
             {
                 model.IsLoading = false;
-
-                foreach (var m in Models)
-                {
-                    m.IsActive = _chatService.LoadedModel?.Id == m.Id;
-                }
+                await LoadModelsAsync();
                 UpdateStatusLabel();
             }
         }
+
+        private async void UnloadButton_Clicked(object? sender, EventArgs e)
+        {
+            if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
+            if (_chatService.LoadedModel?.Id != model.Id) return;
+
+            StatusLabel.Text = "Unloading model...";
+            await _chatService.UnloadModelAsync();
+        }
+
+        private async void DeleteButton_Clicked(object? sender, EventArgs e)
+        {
+            if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
+            if (Shell.Current == null) return;
+            bool confirm = await Shell.Current.DisplayAlert("Delete Model?", $"Are you sure you want to delete '{model.Name}'? The file will also be removed.", "Delete", "Cancel");
+            if (!confirm) return;
+
+            try
+            {
+                if (_chatService.LoadedModel?.Id == model.Id)
+                {
+                    await _chatService.UnloadModelAsync();
+                }
+                if (File.Exists(model.FilePath))
+                {
+                    File.Delete(model.FilePath);
+                }
+                await _databaseService.DeleteModelAsync(model.Id);
+                Models.Remove(model);
+            }
+            catch (Exception ex)
+            {
+                await Shell.Current.DisplayAlert("Error", $"Failed to delete model: {ex.Message}", "OK");
+            }
+        }
+
+        #region Settings Panel Methods
+
+        private void ToggleSettings_Clicked(object sender, EventArgs e)
+        {
+            if (sender is Button { CommandParameter: LlmModel model })
+            {
+                model.IsExpanded = !model.IsExpanded;
+            }
+        }
+
+        private async void SaveSettings_Clicked(object sender, EventArgs e)
+        {
+            if (sender is Button { CommandParameter: LlmModel model } && Shell.Current != null)
+            {
+                await _databaseService.SaveModelAsync(model);
+                await Shell.Current.DisplayAlert("Saved", $"Custom settings for '{model.Name}' have been saved.", "OK");
+            }
+        }
+
+        private async void ResetSettings_Clicked(object sender, EventArgs e)
+        {
+            if (sender is Button { CommandParameter: LlmModel model } && Shell.Current != null)
+            {
+                bool confirm = await Shell.Current.DisplayAlert("Reset Settings?", "This will clear all custom parameters for this model. Are you sure?", "Reset", "Cancel");
+                if (!confirm) return;
+
+                model.CustomCtx = null;
+                model.CustomGpuLayers = null;
+                model.CustomTemperature = null;
+                model.CustomMinP = null;
+                // =========================================================================
+                // === FIX: Add this line to clear the template                        ===
+                // =========================================================================
+                model.CustomChatTemplate = null;
+
+                await _databaseService.SaveModelAsync(model);
+                await Shell.Current.DisplayAlert("Reset Complete", $"Settings for '{model.Name}' have been reset to default.", "OK");
+            }
+        }
+
+        #endregion
 
         private async void AddNewModel_Clicked(object? sender, EventArgs e)
         {
@@ -162,72 +269,5 @@ namespace LoQA.Views
                 UpdateStatusLabel();
             }
         }
-
-        private async void DeleteButton_Clicked(object? sender, EventArgs e)
-        {
-            if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
-
-            bool confirm = false;
-            if (Shell.Current != null)
-            {
-                confirm = await Shell.Current.DisplayAlert("Delete Model?", $"Are you sure you want to delete '{model.Name}'? The file will also be removed.", "Delete", "Cancel");
-            }
-
-            if (!confirm) return;
-
-            try
-            {
-                if (_chatService.LoadedModel?.Id == model.Id)
-                {
-                    await _chatService.UnloadModelAsync();
-                }
-
-                if (File.Exists(model.FilePath))
-                {
-                    File.Delete(model.FilePath);
-                }
-
-                await _databaseService.DeleteModelAsync(model.Id);
-                Models.Remove(model);
-            }
-            catch (Exception ex)
-            {
-                if (Shell.Current != null)
-                {
-                    await Shell.Current.DisplayAlert("Error", $"Failed to delete model: {ex.Message}", "OK");
-                }
-            }
-        }
-
-        private async void UnloadButton_Clicked(object? sender, EventArgs e)
-        {
-            if (sender is not Button button || button.CommandParameter is not LlmModel model) return;
-
-            if (_chatService.LoadedModel?.Id != model.Id)
-            {
-                await DisplayAlert("Info", "This model is not currently loaded.", "OK");
-                return;
-            }
-
-            StatusLabel.Text = "Unloading model...";
-            try
-            {
-                await _chatService.UnloadModelAsync();
-            }
-            catch (Exception ex)
-            {
-                if (Shell.Current != null)
-                {
-                    await Shell.Current.DisplayAlert("Error", $"Failed to unload model: {ex.Message}", "OK");
-                }
-                await LoadModelsAsync();
-                UpdateStatusLabel();
-            }
-        }
-
-        // =========================================================================
-        // === ACTION: REMOVED THE BackButton_Clicked EVENT HANDLER              ===
-        // =========================================================================
-        // This method is no longer needed because the button was removed from the XAML.
     }
 }

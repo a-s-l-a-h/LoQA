@@ -1,134 +1,70 @@
-﻿// LoQA/Services/EasyChatEngine.cs
-
-using LoQA.Services;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using System.Text;
+using System.Text.Json;
 
-public class EasyChatEngine : LoQA.Services.IEasyChatWrapper
+namespace LoQA.Services
 {
-#if WINDOWS
-    private const string DllName = "chat.dll";
-#elif ANDROID
-    private const string DllName = "libchat.so";
-#elif IOS || MACCATALYST
-    private const string DllName = "__Internal";
-#else
-    private const string DllName = "chat"; // Fallback
-#endif
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void TokenCallback([MarshalAs(UnmanagedType.LPUTF8Str)] string token);
-
-    private TokenCallback? _managedCallback;
-    private GCHandle _callbackHandle;
-
-    public event Action<string>? OnTokenReceived;
-    public bool IsInitialized { get; private set; } = false;
-
-    #region P/Invoke Method Signatures
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_default_model_params")]
-    private static extern ChatModelParams GetDefaultModelParams_Native();
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_default_context_params")]
-    private static extern ChatContextParams GetDefaultContextParams_Native();
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_default_sampling_params")]
-    private static extern ChatSamplingParams GetDefaultSamplingParams_Native();
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "initializeLlama")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool initializeLlama([MarshalAs(UnmanagedType.LPUTF8Str)] string model_path, ChatModelParams model_params, ChatContextParams ctx_params);
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "freeLlama")]
-    private static extern void freeLlama();
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "registerTokenCallback")]
-    private static extern void registerTokenCallback(TokenCallback callback);
-
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "generateResponse")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool generateResponse([MarshalAs(UnmanagedType.LPUTF8Str)] string user_input, int max_tokens);
-
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "load_full_history")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool load_full_history_native([MarshalAs(UnmanagedType.LPUTF8Str)] string history_json);
-
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "stopGeneration")]
-    private static extern void stopGeneration_native();
-
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "update_sampling_params")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool update_sampling_params_native(float temperature, float min_p, int seed);
-
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_current_sampling_params")]
-    private static extern ChatSamplingParams get_current_sampling_params_native();
-
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "clearConversation")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool clearConversation_native();
-
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "get_last_error")]
-    private static extern IntPtr get_last_error_native();
-
-    // NEW P/Invoke for setting the template
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, EntryPoint = "set_fallback_chat_template")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool set_fallback_chat_template_native([MarshalAs(UnmanagedType.LPUTF8Str)] string tmpl);
-    #endregion
-
-    #region Public Wrapper Methods
-    public ChatModelParams GetDefaultModelParams() => GetDefaultModelParams_Native();
-    public ChatContextParams GetDefaultContextParams() => GetDefaultContextParams_Native();
-    public ChatSamplingParams GetDefaultSamplingParams() => GetDefaultSamplingParams_Native();
-
-    public async Task<bool> InitializeAsync(string modelPath, ChatModelParams modelParams, ChatContextParams ctxParams)
+    public class EasyChatEngine : IDisposable
     {
-        if (IsInitialized) { Dispose(); }
-        try
+        private const string DllName = "easychatengine.dll";
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern int easyChatEngineInvoke([MarshalAs(UnmanagedType.LPStr)] string request);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        private static extern void easyChatEngineGetLastResult(StringBuilder buffer, int buffer_size);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void TokenCallback(string token);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void registerTokenCallback(TokenCallback callback);
+
+        private readonly TokenCallback _managedCallback;
+
+        public EasyChatEngine()
         {
-            bool success = await Task.Run(() => initializeLlama(modelPath, modelParams, ctxParams));
-            if (success)
+            _managedCallback = (token) => OnTokenReceived?.Invoke(token);
+            registerTokenCallback(_managedCallback);
+        }
+
+        public event Action<string>? OnTokenReceived;
+
+        public Dictionary<string, JsonElement> InvokeCommand(string command)
+        {
+            try
             {
-                _managedCallback = (token) => OnTokenReceived?.Invoke(token);
-                _callbackHandle = GCHandle.Alloc(_managedCallback);
-                registerTokenCallback(_managedCallback);
-                IsInitialized = true;
+                int size = easyChatEngineInvoke(command);
+                if (size <= 0)
+                {
+                    return new Dictionary<string, JsonElement> {
+                        { "status", JsonSerializer.SerializeToElement("ERROR") },
+                        { "message", JsonSerializer.SerializeToElement($"Invoke failed with code: {size}") }
+                    };
+                }
+
+                StringBuilder buffer = new StringBuilder(size + 1);
+                easyChatEngineGetLastResult(buffer, buffer.Capacity);
+                string jsonResponse = buffer.ToString();
+
+                var result = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(jsonResponse);
+                return result ?? new Dictionary<string, JsonElement>();
             }
-            else { OnTokenReceived?.Invoke($"ERROR: Engine initialization failed: {GetLastError()}\n"); }
-            return success;
+            catch (Exception ex)
+            {
+                return new Dictionary<string, JsonElement> {
+                    { "status", JsonSerializer.SerializeToElement("ERROR") },
+                    { "message", JsonSerializer.SerializeToElement($"C# wrapper exception: {ex.Message}") }
+                };
+            }
         }
-        catch (Exception ex) { OnTokenReceived?.Invoke($"FATAL: An exception occurred during initialization: {ex.Message}\n"); return false; }
-    }
 
-    public async Task<bool> GenerateAsync(string prompt, int maxTokens = 4096)
-    {
-        if (!IsInitialized)
+        public void Dispose()
         {
-            OnTokenReceived?.Invoke("ERROR: Service is not initialized.\n");
-            return false;
+            InvokeCommand("command=free");
+            GC.SuppressFinalize(this);
         }
-        return await Task.Run(() => generateResponse(prompt, maxTokens));
     }
-
-    public bool LoadFullHistory(string historyJson)
-    {
-        if (!IsInitialized) return false;
-        return load_full_history_native(historyJson);
-    }
-
-    public bool SetFallbackChatTemplate(string template)
-    {
-        // This can be called before initialization
-        return set_fallback_chat_template_native(template);
-    }
-
-    public void StopGeneration() { if (!IsInitialized) return; stopGeneration_native(); }
-    public bool UpdateSamplingParams(ChatSamplingParams newParams) { if (!IsInitialized) return false; return update_sampling_params_native(newParams.temperature, newParams.min_p, newParams.seed); }
-    public ChatSamplingParams GetCurrentSamplingParams() { if (!IsInitialized) return GetDefaultSamplingParams(); return get_current_sampling_params_native(); }
-    public bool ClearConversation() { if (!IsInitialized) return false; return clearConversation_native(); }
-    public string GetLastError() { IntPtr errorPtr = get_last_error_native(); return Marshal.PtrToStringUTF8(errorPtr) ?? "Unknown error"; }
-    public void Dispose()
-    {
-        if (IsInitialized) { freeLlama(); IsInitialized = false; }
-        if (_callbackHandle.IsAllocated) { _callbackHandle.Free(); }
-        GC.SuppressFinalize(this);
-    }
-    ~EasyChatEngine() { Dispose(); }
-    #endregion
 }

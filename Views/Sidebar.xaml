@@ -15,16 +15,14 @@
                 <Label Text="Temperature" TextColor="White" FontAttributes="Bold"/>
 
                 <!-- =========================================================================
-                     === ACTION: BIND THE SLIDER'S ENABLED STATE DIRECTLY                ===
+                     === FIX: Bind IsEnabled directly to the IsIdle property             ===
                      ========================================================================= -->
-                <!-- The slider is now only disabled when a response is actively generating. -->
-                <!-- It remains enabled when viewing history or when the model is idle.      -->
                 <Slider x:Name="TemperatureSlider" 
                         Minimum="0.0" 
                         Maximum="2.0" 
-                        Value="0.8" 
+                        Value="{Binding CurrentTemperature, Mode=TwoWay}" 
                         ValueChanged="TemperatureSlider_ValueChanged"
-                        IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"/>
+                        IsEnabled="{Binding IsIdle}"/>
 
                 <Label x:Name="TemperatureValueLabel" Text="Current: 0.8" HorizontalOptions="Center" TextColor="#CCCCCC"/>
             </VerticalStackLayout>
@@ -68,6 +66,5 @@
                 Margin="10" 
                 BackgroundColor="#5A6772" 
                 TextColor="White"/>
-
     </Grid>
 </ContentView>

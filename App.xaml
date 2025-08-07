@@ -2,8 +2,7 @@
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:LoQA"
-          
-    xmlns:converters="clr-namespace:LoQA.Converters"
+             xmlns:converters="clr-namespace:LoQA.Converters"
              x:Class="LoQA.App">
     <Application.Resources>
         <ResourceDictionary>
@@ -12,10 +11,6 @@
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- =========================================================================
-                 === ACTION: DEFINE THE CONVERTER HERE AS A GLOBAL RESOURCE            ===
-                 ========================================================================= -->
-            <!-- Any page or control in the entire app can now find this resource. -->
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
 
         </ResourceDictionary>

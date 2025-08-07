@@ -17,11 +17,17 @@ namespace LoQA.Models
         public string FilePath { get; set; } = string.Empty;
         public ModelSourceType SourceType { get; set; } = ModelSourceType.Local;
 
+        public int? CustomCtx { get; set; }
+        public int? CustomGpuLayers { get; set; }
+        public float? CustomTemperature { get; set; }
+        public float? CustomMinP { get; set; }
+        public string? CustomChatTemplate { get; set; }
+
         private bool _isActive;
         public bool IsActive
         {
             get => _isActive;
-            set { if (_isActive != value) { _isActive = value; OnPropertyChanged(); } }
+            set => SetField(ref _isActive, value);
         }
 
         private bool _isExpanded;
@@ -29,38 +35,26 @@ namespace LoQA.Models
         public bool IsExpanded
         {
             get => _isExpanded;
-            set { if (_isExpanded != value) { _isExpanded = value; OnPropertyChanged(); } }
+            set => SetField(ref _isExpanded, value);
         }
 
-        // --- NEW PROPERTIES FOR UI FEEDBACK ---
-
         private bool _isLoading;
-        [Ignore] // This state should not be saved in the database
+        [Ignore]
         public bool IsLoading
         {
             get => _isLoading;
-            set
-            {
-                if (_isLoading != value)
-                {
-                    _isLoading = value;
-                    OnPropertyChanged();
-                }
-            }
+            set => SetField(ref _isLoading, value);
         }
 
         private string? _loadingError;
-        [Ignore] // This state should not be saved in the database
+        [Ignore]
         public string? LoadingError
         {
             get => _loadingError;
             set
             {
-                if (_loadingError != value)
+                if (SetField(ref _loadingError, value))
                 {
-                    _loadingError = value;
-                    OnPropertyChanged();
-                    // Also notify that the derived property has changed
                     OnPropertyChanged(nameof(HasLoadingError));
                 }
             }
@@ -69,10 +63,17 @@ namespace LoQA.Models
         [Ignore]
         public bool HasLoadingError => !string.IsNullOrEmpty(LoadingError);
 
-
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
         }
     }
 }

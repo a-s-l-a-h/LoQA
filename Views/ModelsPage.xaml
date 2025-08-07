@@ -2,20 +2,12 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
-             xmlns:converters="clr-namespace:LoQA.Converters"
              x:Class="LoQA.Views.ModelsPage"
              Title="Manage Models"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
-    <!-- =========================================================================
-         === ACTION: REMOVE THE LOCAL RESOURCE DICTIONARY                      ===
-         ========================================================================= -->
-    <!-- This entire <ContentPage.Resources> block is no longer needed because
-         the converter is now defined globally in App.xaml. -->
-
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="25">
-
             <Border Stroke="{StaticResource PrimaryAccentColor}" StrokeThickness="1" Padding="15">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="10"/>
@@ -36,41 +28,74 @@
                                         <RoundRectangle CornerRadius="8"/>
                                     </Border.StrokeShape>
                                     <VerticalStackLayout Spacing="10">
-                                        <VerticalStackLayout>
-                                            <Label Text="{Binding Name}" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}"/>
-                                            <Label Text="{Binding FilePath}" FontSize="Micro" TextColor="{StaticResource SecondaryTextColor}" LineBreakMode="TailTruncation"/>
-                                            <Label FontSize="Small" FontAttributes="Italic" TextColor="{StaticResource PrimaryAccentColor}" IsVisible="{Binding IsActive}" Text="Loaded" />
-                                        </VerticalStackLayout>
 
-                                        <HorizontalStackLayout Spacing="5" HorizontalOptions="End" Margin="0,10,0,0"
-                                                               IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
-                                            <Button Text="Load"
-                                                    Clicked="LoadButton_Clicked"
-                                                    CommandParameter="{Binding .}"
-                                                    IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}"
-                                                    HeightRequest="40"/>
-                                            <Button Text="Unload"
-                                                    Clicked="UnloadButton_Clicked"
-                                                    CommandParameter="{Binding .}"
-                                                    IsEnabled="{Binding IsActive}"
-                                                    HeightRequest="40"/>
-                                            <Button Text="Delete"
-                                                    BackgroundColor="{StaticResource DestructiveColor}"
-                                                    Clicked="DeleteButton_Clicked"
-                                                    CommandParameter="{Binding .}"
-                                                    HeightRequest="40"/>
-                                        </HorizontalStackLayout>
+                                        <!-- =========================================================================
+                                             === FIX: Replaced Grid with a more robust layout for model details  ===
+                                             ========================================================================= -->
+                                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+
+                                            <!-- This VerticalStackLayout ensures Name, Path, and Status are stacked -->
+                                            <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}"/>
+                                                <Label Text="{Binding FilePath}" FontSize="Micro" TextColor="{StaticResource SecondaryTextColor}" LineBreakMode="TailTruncation"/>
+                                                <Label FontSize="Small" FontAttributes="Italic" TextColor="{StaticResource PrimaryAccentColor}" IsVisible="{Binding IsActive}" Text="Loaded" />
+                                            </VerticalStackLayout>
+
+                                            <Button Grid.Row="0" Grid.Column="1" Text="Settings" Clicked="ToggleSettings_Clicked" CommandParameter="{Binding .}" HeightRequest="40" VerticalOptions="Center"/>
+
+                                            <!-- Main Action Buttons now span across the bottom -->
+                                            <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="5" HorizontalOptions="End" Margin="0,10,0,0"
+                                                                   IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
+                                                <Button Text="Load" Clicked="LoadButton_Clicked" CommandParameter="{Binding .}" IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}" HeightRequest="40"/>
+                                                <Button Text="Unload" Clicked="UnloadButton_Clicked" CommandParameter="{Binding .}" IsEnabled="{Binding IsActive}" HeightRequest="40"/>
+                                                <Button Text="Delete" BackgroundColor="{StaticResource DestructiveColor}" Clicked="DeleteButton_Clicked" CommandParameter="{Binding .}" HeightRequest="40"/>
+                                            </HorizontalStackLayout>
+                                        </Grid>
 
                                         <StackLayout Orientation="Horizontal" Spacing="10" Padding="10" IsVisible="{Binding IsLoading}">
                                             <ActivityIndicator IsRunning="{Binding IsLoading}" Color="{StaticResource PrimaryAccentColor}" />
                                             <Label Text="Loading model..." TextColor="{StaticResource SecondaryTextColor}" VerticalOptions="Center"/>
                                         </StackLayout>
 
-                                        <Label Text="{Binding LoadingError}"
-                                               IsVisible="{Binding HasLoadingError}"
-                                               TextColor="{StaticResource DestructiveColor}"
-                                               FontAttributes="Bold"
-                                               Margin="0,5,0,0" />
+                                        <Label Text="{Binding LoadingError}" IsVisible="{Binding HasLoadingError}" TextColor="{StaticResource DestructiveColor}" FontAttributes="Bold" Margin="0,5,0,0" />
+
+                                        <!-- Expandable Settings Panel -->
+                                        <Border Padding="10" Margin="0,10,0,0" IsVisible="{Binding IsExpanded}" BackgroundColor="{StaticResource SidebarBackgroundColor}">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="5"/>
+                                            </Border.StrokeShape>
+                                            <VerticalStackLayout Spacing="12">
+                                                <Label Text="Custom Model Parameters (Optional)" FontAttributes="Bold" TextColor="White"/>
+
+                                                <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto" VerticalOptions="Center" RowSpacing="8" ColumnSpacing="10">
+                                                    <Label Grid.Row="0" Grid.Column="0" Text="Context (Ctx):" TextColor="White" VerticalTextAlignment="Center"/>
+                                                    <Entry Grid.Row="0" Grid.Column="1" Text="{Binding CustomCtx}" Keyboard="Numeric" Placeholder="Default: 4096"/>
+
+                                                    <Label Grid.Row="1" Grid.Column="0" Text="GPU Layers:" TextColor="White" VerticalTextAlignment="Center"/>
+                                                    <Entry Grid.Row="1" Grid.Column="1" Text="{Binding CustomGpuLayers}" Keyboard="Numeric" Placeholder="Default: 99 (max)"/>
+
+                                                    <Label Grid.Row="2" Grid.Column="0" Text="Temperature:" TextColor="White" VerticalTextAlignment="Center"/>
+                                                    <Entry Grid.Row="2" Grid.Column="1" Text="{Binding CustomTemperature}" Keyboard="Numeric" Placeholder="Default: 0.8"/>
+
+                                                    <Label Grid.Row="3" Grid.Column="0" Text="Min-P:" TextColor="White" VerticalTextAlignment="Center"/>
+                                                    <Entry Grid.Row="3" Grid.Column="1" Text="{Binding CustomMinP}" Keyboard="Numeric" Placeholder="Default: 0.1"/>
+                                                </Grid>
+
+                                                <VerticalStackLayout Spacing="5" Margin="0,10,0,0">
+                                                    <Label Text="Custom Chat Template (future use)" FontAttributes="Bold" TextColor="White"/>
+                                                    <Label Text="The engine currently uses its default template. Saving a template here prepares it for future updates." TextColor="LightGray" FontSize="Micro"/>
+                                                    <Editor Text="{Binding CustomChatTemplate}"
+                                                            Placeholder="e.g. {% for message in messages %}..."
+                                                            HeightRequest="150"
+                                                            AutoSize="Disabled"/>
+                                                </VerticalStackLayout>
+
+                                                <HorizontalStackLayout Spacing="10" HorizontalOptions="End" Margin="0,10,0,0">
+                                                    <Button Text="Reset to Defaults" Clicked="ResetSettings_Clicked" CommandParameter="{Binding .}"/>
+                                                    <Button Text="Save Settings" Clicked="SaveSettings_Clicked" CommandParameter="{Binding .}" FontAttributes="Bold"/>
+                                                </HorizontalStackLayout>
+                                            </VerticalStackLayout>
+                                        </Border>
 
                                     </VerticalStackLayout>
                                 </Border>
@@ -79,7 +104,6 @@
                     </CollectionView>
                 </VerticalStackLayout>
             </Border>
-
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

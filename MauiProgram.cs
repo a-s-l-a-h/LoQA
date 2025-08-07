@@ -21,11 +21,10 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        builder.Services.AddSingleton<IEasyChatWrapper, EasyChatEngine>();
+        builder.Services.AddSingleton<EasyChatEngine>();
         builder.Services.AddSingleton<EasyChatService>();
         builder.Services.AddSingleton<DatabaseService>();
 
-        // Register ChatContentPage as the main page singleton.
         builder.Services.AddSingleton<ChatContentPage>();
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<ModelsPage>();

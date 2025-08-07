@@ -2,101 +2,64 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
-             xmlns:converters="clr-namespace:LoQA.Converters"
              x:Class="LoQA.Views.ChatContentPage"
              Title="EasyChat"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
-        </ResourceDictionary>
-    </ContentPage.Resources>
-
     <NavigationPage.TitleView>
-        <Label x:Name="StatusLabel"
-               Text="Please initialize the model."
-               TextColor="{StaticResource SecondaryTextColor}"
-               VerticalTextAlignment="Center"
-               HorizontalTextAlignment="Center"/>
+        <Label x:Name="StatusLabel" TextColor="{StaticResource SecondaryTextColor}" VerticalTextAlignment="Center" HorizontalTextAlignment="Center"/>
     </NavigationPage.TitleView>
 
     <Grid RowDefinitions="*, Auto" Padding="10" ColumnSpacing="10">
-
-        <CollectionView Grid.Row="0"
-                        x:Name="ChatMessagesView"
-                        Margin="5,0"
-                        ItemsSource="{Binding CurrentMessages}"
-                        ItemsUpdatingScrollMode="KeepLastItemInView">
+        <CollectionView Grid.Row="0" x:Name="ChatMessagesView" Margin="5,0" ItemsSource="{Binding CurrentMessages}" ItemsUpdatingScrollMode="KeepLastItemInView">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:ChatMessageViewModel">
-                    <Grid Margin="5" HorizontalOptions="{Binding HorizontalAlignment}">
-                        <Border Padding="10"
-                                BackgroundColor="{Binding BackgroundColor}"
+                    <Grid Padding="5,10">
+                        <Border BackgroundColor="{Binding BackgroundColor}"
+                                Padding="15,10"
                                 StrokeThickness="0"
-                                MaximumWidthRequest="400">
+                                MaximumWidthRequest="300"
+                                HorizontalOptions="{Binding HorizontalAlignment}">
                             <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="15" />
+                                <RoundRectangle CornerRadius="15"/>
                             </Border.StrokeShape>
-                            <Label Text="{Binding Content}"
-                                   TextColor="{Binding TextColor}"
-                                   LineBreakMode="WordWrap"/>
+                            <Label Text="{Binding Content}" TextColor="{Binding TextColor}" LineBreakMode="WordWrap"/>
                         </Border>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- Main Input Grid -->
-        <Grid Grid.Row="1" 
-              ColumnDefinitions="*, Auto" 
-              ColumnSpacing="10" 
-              Margin="5,10,0,0" 
-              IsEnabled="{Binding CanUserInput}"
+        <!-- 
+           =========================================================================
+           === FIX: Removed IsEnabled="{Binding CanUserInput}" from this Grid.     ===
+           === This allows the container to remain enabled so the Stop button    ===
+           === can receive click events.                                         ===
+           =========================================================================
+        -->
+        <Grid Grid.Row="1" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="5,10,0,0" 
               IsVisible="{Binding IsHistoryLoadPending, Converter={StaticResource InverseBoolConverter}}"
               x:Name="InputGrid">
 
-            <Editor Grid.Column="0"
-                    x:Name="PromptEditor"
-                    Placeholder="Enter your prompt here..."
-                    AutoSize="TextChanges"
-                    IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
-                    TextColor="{StaticResource PrimaryTextColor}"
-                    PlaceholderColor="{StaticResource SecondaryTextColor}"/>
+            <Editor Grid.Column="0" x:Name="PromptEditor" 
+                    Placeholder="Enter your prompt here..." AutoSize="TextChanges" 
+                    TextColor="{StaticResource PrimaryTextColor}" PlaceholderColor="{StaticResource SecondaryTextColor}"
+                    IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"/>
 
-            <Button Grid.Column="1"
-                    x:Name="SendButton"
-                    Text="➤"
-                    IsVisible="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
-                    Clicked="SendButton_Clicked"
-                    Style="{StaticResource CircleButton}"/>
+            <Button Grid.Column="1" x:Name="SendButton" Text="➤" IsVisible="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}" Clicked="SendButton_Clicked" Style="{StaticResource CircleButton}"/>
 
-            <Button Grid.Column="1"
-                    x:Name="StopButton"
-                    Text="■"
-                    IsVisible="{Binding IsGenerating}"
-                    Clicked="StopButton_Clicked"
-                    Style="{StaticResource CircleButton}"
-                    BackgroundColor="{StaticResource DestructiveColor}"/>
+            <Button Grid.Column="1" x:Name="StopButton" Text="■" IsVisible="{Binding IsGenerating}" Clicked="StopButton_Clicked" Style="{StaticResource CircleButton}" BackgroundColor="{StaticResource DestructiveColor}"/>
         </Grid>
 
-        <!-- =========================================================================
-             === ACTION: FIXED OBSOLETE FillAndExpand WARNING                      ===
-             ========================================================================= -->
-        <!-- We now wrap the button in its own Grid to make it stretch. -->
         <Grid Grid.Row="1" Margin="5,10,0,0" IsVisible="{Binding IsHistoryLoadPending}">
             <Button x:Name="LoadHistoryButton"
                     Text="Load History &amp; Continue Chat"
-                    IsEnabled="{Binding IsGenerating, Converter={StaticResource InverseBoolConverter}}"
+                    IsEnabled="{Binding IsLoadingHistory, Converter={StaticResource InverseBoolConverter}}"
                     Clicked="LoadHistoryButton_Clicked"/>
         </Grid>
 
-        <ActivityIndicator Grid.Row="0" Grid.RowSpan="2"
-                           x:Name="BusyIndicator"
-                           IsRunning="{Binding IsGenerating}"
-                           IsVisible="{Binding IsGenerating}"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           Color="{StaticResource PrimaryAccentColor}" />
+        <ActivityIndicator Grid.Row="0" Grid.RowSpan="2" HorizontalOptions="Center" VerticalOptions="Center" Color="{StaticResource PrimaryAccentColor}"
+                           IsVisible="{Binding IsBusy}"
+                           IsRunning="{Binding IsBusy}" />
     </Grid>
 </ContentPage>

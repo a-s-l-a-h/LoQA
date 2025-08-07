@@ -20,10 +20,7 @@ namespace LoQA.Views
         {
             if (Handler?.MauiContext == null)
             {
-                if (_chatService != null)
-                {
-                    _chatService.PropertyChanged -= OnServicePropertyChanged;
-                }
+                if (_chatService != null) _chatService.PropertyChanged -= OnServicePropertyChanged;
                 return;
             }
 
@@ -32,23 +29,13 @@ namespace LoQA.Views
 
             if (_chatService != newChatService)
             {
-                if (_chatService != null)
-                {
-                    _chatService.PropertyChanged -= OnServicePropertyChanged;
-                }
-
+                if (_chatService != null) _chatService.PropertyChanged -= OnServicePropertyChanged;
                 _chatService = newChatService;
-
-                // =========================================================================
-                // === ACTION: CORRECTED TYPO AND NULL REFERENCE WARNING                ===
-                // =========================================================================
-                // The typo '_chatShatService' is now '_chatService'.
                 if (_chatService != null)
                 {
                     this.BindingContext = _chatService;
                     _chatService.PropertyChanged += OnServicePropertyChanged;
                     Task.Run(() => _chatService.LoadConversationsFromDbAsync());
-                    // This is also safe because we are inside the null check.
                     UpdateAllStates();
                 }
             }
@@ -57,24 +44,21 @@ namespace LoQA.Views
         private void UpdateAllStates()
         {
             if (_chatService == null) return;
-
-            var currentParams = _chatService.GetCurrentSamplingParams();
-            TemperatureSlider.Value = currentParams.temperature;
-            TemperatureValueLabel.Text = $"Current: {currentParams.temperature:F2}";
+            TemperatureSlider.Value = _chatService.CurrentTemperature;
+            TemperatureValueLabel.Text = $"Current: {_chatService.CurrentTemperature:F2}";
             ConversationsListView.SelectedItem = _chatService.CurrentConversation;
-            UpdateGenerationState(_chatService.IsGenerating);
+            UpdateControlStates();
         }
 
         private void OnServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (_chatService == null) return;
-
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 switch (e.PropertyName)
                 {
-                    case nameof(EasyChatService.IsGenerating):
-                        UpdateGenerationState(_chatService.IsGenerating);
+                    case nameof(EasyChatService.CurrentEngineState):
+                        UpdateControlStates();
                         break;
                     case nameof(EasyChatService.CurrentConversation):
                         if (ConversationsListView.SelectedItem != _chatService.CurrentConversation)
@@ -82,21 +66,28 @@ namespace LoQA.Views
                             ConversationsListView.SelectedItem = _chatService.CurrentConversation;
                         }
                         break;
+                    case nameof(EasyChatService.CurrentTemperature):
+                        TemperatureSlider.Value = _chatService.CurrentTemperature;
+                        TemperatureValueLabel.Text = $"Current: {_chatService.CurrentTemperature:F2}";
+                        break;
                 }
             });
         }
 
-        private void UpdateGenerationState(bool isGenerating)
+        private void UpdateControlStates()
         {
-            ConversationsListView.IsEnabled = !isGenerating;
+            if (_chatService == null) return;
+            NewChatButton.IsEnabled = true;
+            bool isBusy = _chatService.CurrentEngineState == EngineState.BUSY;
+            ModelsButton.IsEnabled = !isBusy;
+            SettingsButton.IsEnabled = !isBusy;
+            ConversationsListView.IsEnabled = !isBusy;
         }
 
         private async void NewChatButton_Clicked(object sender, EventArgs e)
         {
-            if (_chatService == null || _chatService.IsGenerating) return;
-
+            if (_chatService == null) return;
             _chatService.StartNewConversation();
-
             if (Shell.Current != null)
             {
                 await Shell.Current.GoToAsync("//ChatContentPage");
@@ -107,11 +98,15 @@ namespace LoQA.Views
         private async void ConversationsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_chatService == null || e.CurrentSelection.FirstOrDefault() is not ChatHistory selected) return;
-            if (_chatService.CurrentConversation?.Id == selected.Id && !_chatService.IsHistoryLoadPending) return;
 
+            // FIX: Use the correct public property IsIdle
+            if (_chatService.CurrentConversation?.Id == selected.Id && _chatService.IsIdle)
+            {
+                if (Shell.Current != null) Shell.Current.FlyoutIsPresented = false;
+                return;
+            }
             await _chatService.SelectConversationAsync(selected);
-
-            if (Shell.Current is not null)
+            if (Shell.Current != null)
             {
                 Shell.Current.FlyoutIsPresented = false;
             }
@@ -139,12 +134,16 @@ namespace LoQA.Views
 
         private void TemperatureSlider_ValueChanged(object sender, ValueChangedEventArgs e)
         {
-            TemperatureValueLabel.Text = $"Current: {e.NewValue:F2}";
-            if (_chatService == null || !_chatService.IsInitialized) return;
+            if (_chatService == null) return;
 
-            var currentParams = _chatService.GetCurrentSamplingParams();
-            currentParams.temperature = (float)e.NewValue;
-            _chatService.UpdateSamplingParams(currentParams);
+            // FIX: Use the correct public property IsIdle
+            if (!_chatService.IsIdle) return;
+
+            float newTemp = (float)e.NewValue;
+            TemperatureValueLabel.Text = $"Current: {newTemp:F2}";
+
+            // FIX: Call the corrected public method
+            _chatService.UpdateSamplingParams(newTemp, _chatService.CurrentMinP);
         }
 
         private async void ModelsButton_Clicked(object sender, EventArgs e)
@@ -152,6 +151,7 @@ namespace LoQA.Views
             if (Shell.Current != null)
             {
                 await Shell.Current.GoToAsync(nameof(ModelsPage));
+                Shell.Current.FlyoutIsPresented = false;
             }
         }
 
@@ -160,6 +160,7 @@ namespace LoQA.Views
             if (Shell.Current != null)
             {
                 await Shell.Current.GoToAsync(nameof(SettingsPage));
+                Shell.Current.FlyoutIsPresented = false;
             }
         }
     }
@@ -169,7 +170,7 @@ namespace LoQA.Views
         public static Page? GetParentPage(this VisualElement element)
         {
             Element? parent = element.Parent;
-            while (parent != null && !(parent is Page))
+            while (parent != null && parent is not Page)
             {
                 parent = parent.Parent;
             }
