@@ -69,17 +69,17 @@
 	<!-- Native Library References                                             -->
 	<!-- ===================================================================== -->
 
-	<!-- ANDROID NATIVE LIBRARIES -->
+	<!-- ===================================================================== -->
+	<!-- ANDROID NATIVE LIBRARIES (UPDATED FOR libeasychatengine.so)             -->
+	<!-- ===================================================================== -->
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<!-- ARM64-V8A -->
-		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libomp.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libomp.so')">
-			<Link>lib\arm64-v8a\libomp.so</Link>
+
+		<!-- ARM64-V8A (For modern 64-bit phones - ESSENTIAL) -->
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libeasychatengine.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libeasychatengine.so')">
+			<Link>lib\arm64-v8a\libeasychatengine.so</Link>
 			<Abi>arm64-v8a</Abi>
 		</AndroidNativeLibrary>
-		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libchat.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libchat.so')">
-			<Link>lib\arm64-v8a\libchat.so</Link>
-			<Abi>arm64-v8a</Abi>
-		</AndroidNativeLibrary>
+		<!-- Dependencies -->
 		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libllama.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libllama.so')">
 			<Link>lib\arm64-v8a\libllama.so</Link>
 			<Abi>arm64-v8a</Abi>
@@ -96,23 +96,18 @@
 			<Link>lib\arm64-v8a\libggml-cpu.so</Link>
 			<Abi>arm64-v8a</Abi>
 		</AndroidNativeLibrary>
-		<!-- ADD THIS LINE FOR LIBOMP.SO -->
-
-		<!-- If you have liblua54.so for arm64-v8a and it's needed by chat/llama, include it too.
-		     If it's only for NLua's C# scripting, it's typically handled by NLua's package.
-		     But if your native `chat` code ALSO uses Lua, then you might need to explicitly package it:
-		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\liblua54.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\liblua54.so')">
-			<Link>lib\arm64-v8a\liblua54.so</Link>
+		<AndroidNativeLibrary Include="Platforms\Android\libs\arm64-v8a\libomp.so" Condition="Exists('Platforms\Android\libs\arm64-v8a\libomp.so')">
+			<Link>lib\arm64-v8a\libomp.so</Link>
 			<Abi>arm64-v8a</Abi>
 		</AndroidNativeLibrary>
-		-->
 
-		<!-- ARMEABI-V7A -->
-		<!-- IMPORTANT: Only uncomment/include these if you HAVE these files compiled for armeabi-v7a -->
-		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libchat.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libchat.so')">
-			<Link>lib\armeabi-v7a\libchat.so</Link>
+
+		<!-- ARMEABI-V7A (For older 32-bit phones - Optional) -->
+		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libeasychatengine.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libeasychatengine.so')">
+			<Link>lib\armeabi-v7a\libeasychatengine.so</Link>
 			<Abi>armeabi-v7a</Abi>
 		</AndroidNativeLibrary>
+		<!-- Dependencies -->
 		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\libllama.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\libllama.so')">
 			<Link>lib\armeabi-v7a\libllama.so</Link>
 			<Abi>armeabi-v7a</Abi>
@@ -129,19 +124,14 @@
 			<Link>lib\armeabi-v7a\libggml-cpu.so</Link>
 			<Abi>armeabi-v7a</Abi>
 		</AndroidNativeLibrary>
-		<!--
-		<AndroidNativeLibrary Include="Platforms\Android\libs\armeabi-v7a\liblua54.so" Condition="Exists('Platforms\Android\libs\armeabi-v7a\liblua54.so')">
-			<Link>lib\armeabi-v7a\liblua54.so</Link>
-			<Abi>armeabi-v7a</Abi>
-		</AndroidNativeLibrary>
-		-->
 
-		<!-- X86_64 (for emulators) -->
-		<!-- IMPORTANT: Only uncomment/include these if you HAVE these files compiled for x86_64 -->
-		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libchat.so" Condition="Exists('Platforms\Android\libs\x86_64\libchat.so')">
-			<Link>lib\x86_64\libchat.so</Link>
+
+		<!-- X86_64 (For the official Android Emulator - Recommended for testing) -->
+		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libeasychatengine.so" Condition="Exists('Platforms\Android\libs\x86_64\libeasychatengine.so')">
+			<Link>lib\x86_64\libeasychatengine.so</Link>
 			<Abi>x86_64</Abi>
 		</AndroidNativeLibrary>
+		<!-- Dependencies -->
 		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\libllama.so" Condition="Exists('Platforms\Android\libs\x86_64\libllama.so')">
 			<Link>lib\x86_64\libllama.so</Link>
 			<Abi>x86_64</Abi>
@@ -158,12 +148,7 @@
 			<Link>lib\x86_64\libggml-cpu.so</Link>
 			<Abi>x86_64</Abi>
 		</AndroidNativeLibrary>
-		<!--
-		<AndroidNativeLibrary Include="Platforms\Android\libs\x86_64\liblua54.so" Condition="Exists('Platforms\Android\libs\x86_64\liblua54.so')">
-			<Link>lib\x86_64\liblua54.so</Link>
-			<Abi>x86_64</Abi>
-		</AndroidNativeLibrary>
-		-->
+
 	</ItemGroup>
 
 

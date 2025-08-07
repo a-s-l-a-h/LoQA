@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Services/EasyChatEngine.cs
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -8,7 +9,16 @@ namespace LoQA.Services
 {
     public class EasyChatEngine : IDisposable
     {
-        private const string DllName = "easychatengine.dll";
+#if WINDOWS
+            private const string DllName = "easychatengine.dll";
+#elif ANDROID
+            // FIX: Ensure this points to your new library name for Android
+            private const string DllName = "libeasychatengine.so";
+#elif IOS || MACCATALYST
+        private const string DllName = "__Internal"; // For static linking
+#else
+            private const string DllName = "easychatengine";
+#endif
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         private static extern int easyChatEngineInvoke([MarshalAs(UnmanagedType.LPStr)] string request);
