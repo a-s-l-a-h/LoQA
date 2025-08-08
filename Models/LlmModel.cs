@@ -1,4 +1,5 @@
-﻿using SQLite;
+﻿// C:\MYWORLD\Projects\LoQA\LoQA\Models\LlmModel.cs
+using SQLite;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -22,6 +23,13 @@ namespace LoQA.Models
         public float? CustomTemperature { get; set; }
         public float? CustomMinP { get; set; }
         public string? CustomChatTemplate { get; set; }
+
+        private bool _isDefault;
+        public bool IsDefault
+        {
+            get => _isDefault;
+            set => SetField(ref _isDefault, value);
+        }
 
         private bool _isActive;
         public bool IsActive

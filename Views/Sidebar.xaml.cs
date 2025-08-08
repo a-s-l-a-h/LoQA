@@ -1,3 +1,4 @@
+// C:\MYWORLD\Projects\LoQA\LoQA\Views\Sidebar.xaml.cs
 using LoQA.Models;
 using LoQA.Services;
 using System.ComponentModel;
@@ -99,15 +100,18 @@ namespace LoQA.Views
         {
             if (_chatService == null || e.CurrentSelection.FirstOrDefault() is not ChatHistory selected) return;
 
-            // FIX: Use the correct public property IsIdle
-            if (_chatService.CurrentConversation?.Id == selected.Id && _chatService.IsIdle)
+            // If user re-selects the same conversation, do nothing.
+            if (_chatService.CurrentConversation?.Id == selected.Id)
             {
                 if (Shell.Current != null) Shell.Current.FlyoutIsPresented = false;
                 return;
             }
+
+            // Always allow selection and viewing. The ChatContentPage will handle the UI state.
             await _chatService.SelectConversationAsync(selected);
             if (Shell.Current != null)
             {
+                await Shell.Current.GoToAsync("//ChatContentPage");
                 Shell.Current.FlyoutIsPresented = false;
             }
         }
@@ -135,14 +139,11 @@ namespace LoQA.Views
         private void TemperatureSlider_ValueChanged(object sender, ValueChangedEventArgs e)
         {
             if (_chatService == null) return;
-
-            // FIX: Use the correct public property IsIdle
             if (!_chatService.IsIdle) return;
 
             float newTemp = (float)e.NewValue;
             TemperatureValueLabel.Text = $"Current: {newTemp:F2}";
 
-            // FIX: Call the corrected public method
             _chatService.UpdateSamplingParams(newTemp, _chatService.CurrentMinP);
         }
 

@@ -1,9 +1,11 @@
-// Views/ModelsPage.xaml.cs
+// C:\MYWORLD\Projects\LoQA\LoQA\Views\ModelsPage.xaml.cs
 using LoQA.Models;
 using LoQA.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+// FIX: Added alias to resolve ambiguity between UI Switch and Diagnostics Switch
+using Switch = Microsoft.Maui.Controls.Switch;
 
 namespace LoQA.Views
 {
@@ -62,7 +64,8 @@ namespace LoQA.Views
                     existingModel.CustomGpuLayers = dbModel.CustomGpuLayers;
                     existingModel.CustomTemperature = dbModel.CustomTemperature;
                     existingModel.CustomMinP = dbModel.CustomMinP;
-                    existingModel.CustomChatTemplate = dbModel.CustomChatTemplate; // Update template field
+                    existingModel.CustomChatTemplate = dbModel.CustomChatTemplate;
+                    existingModel.IsDefault = dbModel.IsDefault;
                     existingModel.IsActive = _chatService.LoadedModel?.Id == dbModel.Id;
                 }
                 else
@@ -165,6 +168,21 @@ namespace LoQA.Views
             }
         }
 
+        private async void DefaultModelSwitch_Toggled(object sender, ToggledEventArgs e)
+        {
+            if (sender is not Switch { BindingContext: LlmModel model }) return;
+
+            if (e.Value)
+            {
+                foreach (var otherModel in Models.Where(m => m.Id != model.Id))
+                {
+                    otherModel.IsDefault = false;
+                }
+            }
+
+            await _databaseService.SaveModelAsync(model);
+        }
+
         #region Settings Panel Methods
 
         private void ToggleSettings_Clicked(object sender, EventArgs e)
@@ -195,9 +213,6 @@ namespace LoQA.Views
                 model.CustomGpuLayers = null;
                 model.CustomTemperature = null;
                 model.CustomMinP = null;
-                // =========================================================================
-                // === FIX: Add this line to clear the template                        ===
-                // =========================================================================
                 model.CustomChatTemplate = null;
 
                 await _databaseService.SaveModelAsync(model);

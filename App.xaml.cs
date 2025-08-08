@@ -1,4 +1,5 @@
-﻿using LoQA.Services;
+﻿// C:\MYWORLD\Projects\LoQA\LoQA\App.xaml.cs
+using LoQA.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 
@@ -14,6 +15,12 @@ namespace LoQA
         protected override Window CreateWindow(IActivationState? activationState)
         {
             var window = new Window(new AppShell());
+
+            // --- REMOVED ---
+            // The window.Created event handler that automatically loaded the default model
+            // has been removed from this section. The app will now always start
+            // without a model loaded.
+            // ---------------
 
             window.Destroying += (s, e) =>
             {

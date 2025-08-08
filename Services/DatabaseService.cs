@@ -1,4 +1,5 @@
-﻿using LoQA.Models;
+﻿// C:\MYWORLD\Projects\LoQA\LoQA\Services\DatabaseService.cs
+using LoQA.Models;
 using SQLite;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -61,6 +62,20 @@ namespace LoQA.Services
         public async Task<int> SaveModelAsync(LlmModel model)
         {
             await InitAsync();
+
+            if (model.IsDefault)
+            {
+                await _connection!.RunInTransactionAsync(tran =>
+                {
+                    var currentDefault = tran.Table<LlmModel>().Where(m => m.IsDefault && m.Id != model.Id).FirstOrDefault();
+                    if (currentDefault != null)
+                    {
+                        currentDefault.IsDefault = false;
+                        tran.Update(currentDefault);
+                    }
+                });
+            }
+
             if (model.Id != 0)
             {
                 return await _connection!.UpdateAsync(model);
@@ -69,6 +84,12 @@ namespace LoQA.Services
             {
                 return await _connection!.InsertAsync(model);
             }
+        }
+
+        public async Task<LlmModel?> GetDefaultModelAsync()
+        {
+            await InitAsync();
+            return await _connection!.Table<LlmModel>().Where(m => m.IsDefault).FirstOrDefaultAsync();
         }
 
         public async Task<int> DeleteModelAsync(int id)

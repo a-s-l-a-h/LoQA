@@ -1,4 +1,5 @@
-﻿using LoQA.Models;
+﻿// C:\MYWORLD\Projects\LoQA\LoQA\Services\EasyChatService.cs
+using LoQA.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,6 +15,8 @@ using System.Web;
 namespace LoQA.Services
 {
     public enum EngineState { UNINITIALIZED, IDLE, BUSY, IN_ERROR }
+
+    public enum DefaultModelLoadResult { Success, FailedToLoad, NoDefaultModelSet }
 
     public class EasyChatService : INotifyPropertyChanged, IDisposable
     {
@@ -33,16 +36,25 @@ namespace LoQA.Services
         public ObservableCollection<ChatMessageViewModel> CurrentMessages { get; } = new();
         public ObservableCollection<ChatHistory> ConversationList { get; } = new();
 
-        public EngineState CurrentEngineState { get => _currentEngineState; private set => SetField(ref _currentEngineState, value, nameof(CurrentEngineState), nameof(IsIdle), nameof(IsBusy), nameof(CanUserInput)); }
+        public EngineState CurrentEngineState { get => _currentEngineState; private set => SetField(ref _currentEngineState, value, nameof(CurrentEngineState), nameof(IsIdle), nameof(IsBusy), nameof(CanUserInput), nameof(IsModelLoaded), nameof(ShowGlobalSpinner)); }
         public string LastErrorMessage { get => _lastErrorMessage; private set => SetField(ref _lastErrorMessage, value); }
 
-        public bool IsGenerating { get => _isGenerating; private set => SetField(ref _isGenerating, value, nameof(IsGenerating), nameof(IsBusy), nameof(CanUserInput)); }
+        public bool IsGenerating { get => _isGenerating; private set => SetField(ref _isGenerating, value, nameof(IsGenerating), nameof(IsBusy), nameof(CanUserInput), nameof(ShowGlobalSpinner)); }
         public bool IsHistoryLoadPending { get => _isHistoryLoadPending; private set => SetField(ref _isHistoryLoadPending, value, nameof(IsHistoryLoadPending), nameof(CanUserInput)); }
-        public bool IsLoadingHistory { get => _isLoadingHistory; private set => SetField(ref _isLoadingHistory, value); }
+        public bool IsLoadingHistory { get => _isLoadingHistory; private set => SetField(ref _isLoadingHistory, value, nameof(IsBusy), nameof(ShowGlobalSpinner)); }
 
-        public bool IsBusy => CurrentEngineState == EngineState.BUSY && !IsGenerating && !IsLoadingHistory;
+        public bool IsBusy => CurrentEngineState == EngineState.BUSY || IsLoadingHistory;
         public bool IsIdle => CurrentEngineState == EngineState.IDLE;
-        public bool CanUserInput => CurrentEngineState == EngineState.IDLE && !IsHistoryLoadPending;
+        public bool IsModelLoaded => LoadedModel != null && CurrentEngineState != EngineState.UNINITIALIZED && CurrentEngineState != EngineState.IN_ERROR;
+        public bool CanUserInput => IsModelLoaded && CurrentEngineState == EngineState.IDLE && !IsHistoryLoadPending;
+
+        // FIX: New property to control the main loading spinner
+        public bool ShowGlobalSpinner => IsLoadingHistory || (IsBusy && !IsGenerating);
+
+        public bool ShowInitialPromptPanel => !IsModelLoaded && CurrentConversation == null;
+        public bool ShowInputPanel => IsModelLoaded && !IsHistoryLoadPending;
+        public bool ShowLoadHistoryPanel => IsModelLoaded && IsHistoryLoadPending;
+        public bool ShowHistoryNeedsModelPanel => !IsModelLoaded && IsHistoryLoadPending;
 
         public float CurrentTemperature { get; private set; } = 0.8f;
         public float CurrentMinP { get; private set; } = 0.1f;
@@ -55,6 +67,14 @@ namespace LoQA.Services
             _databaseService = databaseService;
             _engine.OnTokenReceived += OnTokenReceived;
             PollStatusAsync();
+        }
+
+        private void NotifyPanelStates()
+        {
+            OnPropertyChanged(nameof(ShowInitialPromptPanel));
+            OnPropertyChanged(nameof(ShowInputPanel));
+            OnPropertyChanged(nameof(ShowLoadHistoryPanel));
+            OnPropertyChanged(nameof(ShowHistoryNeedsModelPanel));
         }
 
         public async Task LoadModelAsync(LlmModel modelToLoad)
@@ -92,6 +112,36 @@ namespace LoQA.Services
             {
                 HandleErrorResponse(response);
             }
+            OnPropertyChanged(nameof(IsModelLoaded));
+            NotifyPanelStates();
+        }
+
+        public async Task<DefaultModelLoadResult> LoadDefaultModelAsync()
+        {
+            if (IsModelLoaded) return DefaultModelLoadResult.Success;
+
+            Debug.WriteLine("Checking for default model...");
+            var defaultModel = await _databaseService.GetDefaultModelAsync();
+
+            if (defaultModel == null)
+            {
+                Debug.WriteLine("No default model found in the database.");
+                return DefaultModelLoadResult.NoDefaultModelSet;
+            }
+
+            Debug.WriteLine($"Found default model: {defaultModel.Name}. Loading...");
+            await LoadModelAsync(defaultModel);
+
+            if (CurrentEngineState == EngineState.IDLE)
+            {
+                Debug.WriteLine("Default model loaded successfully.");
+                return DefaultModelLoadResult.Success;
+            }
+            else
+            {
+                Debug.WriteLine($"Failed to load default model. Error: {LastErrorMessage}");
+                return DefaultModelLoadResult.FailedToLoad;
+            }
         }
 
         public Task UnloadModelAsync()
@@ -102,6 +152,7 @@ namespace LoQA.Services
             PollStatusAsync();
             LoadedModel = null;
             OnPropertyChanged(nameof(LoadedModel));
+            OnPropertyChanged(nameof(IsModelLoaded));
             StartNewConversation();
             return Task.CompletedTask;
         }
@@ -118,6 +169,7 @@ namespace LoQA.Services
             if (CurrentConversation == null)
             {
                 CurrentConversation = new ChatHistory { Name = prompt.Length > 40 ? prompt[..40] + "..." : prompt };
+                NotifyPanelStates();
             }
 
             _currentAssistantMessage = new ChatMessageViewModel { Role = "assistant", Content = "" };
@@ -143,8 +195,11 @@ namespace LoQA.Services
 
         public async Task SelectConversationAsync(ChatHistory conversation)
         {
-            AbortCurrentTask();
-            _engine.InvokeCommand("command=clear_context");
+            if (IsModelLoaded)
+            {
+                AbortCurrentTask();
+                _engine.InvokeCommand("command=clear_context");
+            }
 
             CurrentConversation = conversation;
             OnPropertyChanged(nameof(CurrentConversation));
@@ -157,12 +212,13 @@ namespace LoQA.Services
             }
 
             IsHistoryLoadPending = true;
+            NotifyPanelStates();
             await PollStatusAsync();
         }
 
         public async Task LoadPendingHistoryIntoEngineAsync()
         {
-            if (!IsHistoryLoadPending || CurrentConversation == null) return;
+            if (!IsHistoryLoadPending || CurrentConversation == null || !IsModelLoaded) return;
 
             IsLoadingHistory = true;
 
@@ -176,6 +232,7 @@ namespace LoQA.Services
                 if (CurrentEngineState == EngineState.IDLE)
                 {
                     IsHistoryLoadPending = false;
+                    NotifyPanelStates();
                 }
             }
             else
@@ -187,8 +244,12 @@ namespace LoQA.Services
 
         public void StartNewConversation()
         {
-            AbortCurrentTask();
-            _engine.InvokeCommand("command=clear_context");
+            if (IsModelLoaded)
+            {
+                AbortCurrentTask();
+                _engine.InvokeCommand("command=clear_context");
+            }
+
             CurrentConversation = null;
             CurrentMessages.Clear();
             OnPropertyChanged(nameof(CurrentConversation));
@@ -197,6 +258,7 @@ namespace LoQA.Services
             IsLoadingHistory = false;
             IsGenerating = false;
 
+            NotifyPanelStates();
             PollStatusAsync();
         }
 
@@ -281,6 +343,7 @@ namespace LoQA.Services
                 if (IsGenerating) IsGenerating = false;
                 if (IsLoadingHistory) IsLoadingHistory = false;
             }
+            NotifyPanelStates();
         }
 
         private void HandleErrorResponse(Dictionary<string, JsonElement> response)
@@ -387,6 +450,7 @@ namespace LoQA.Services
             {
                 OnPropertyChanged(prop);
             }
+            NotifyPanelStates();
             return true;
         }
     }

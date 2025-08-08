@@ -29,12 +29,7 @@
                                     </Border.StrokeShape>
                                     <VerticalStackLayout Spacing="10">
 
-                                        <!-- =========================================================================
-                                             === FIX: Replaced Grid with a more robust layout for model details  ===
-                                             ========================================================================= -->
                                         <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
-
-                                            <!-- This VerticalStackLayout ensures Name, Path, and Status are stacked -->
                                             <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2" VerticalOptions="Center">
                                                 <Label Text="{Binding Name}" FontAttributes="Bold" TextColor="{StaticResource PrimaryTextColor}"/>
                                                 <Label Text="{Binding FilePath}" FontSize="Micro" TextColor="{StaticResource SecondaryTextColor}" LineBreakMode="TailTruncation"/>
@@ -43,7 +38,6 @@
 
                                             <Button Grid.Row="0" Grid.Column="1" Text="Settings" Clicked="ToggleSettings_Clicked" CommandParameter="{Binding .}" HeightRequest="40" VerticalOptions="Center"/>
 
-                                            <!-- Main Action Buttons now span across the bottom -->
                                             <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="5" HorizontalOptions="End" Margin="0,10,0,0"
                                                                    IsVisible="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}">
                                                 <Button Text="Load" Clicked="LoadButton_Clicked" CommandParameter="{Binding .}" IsEnabled="{Binding IsActive, Converter={StaticResource InverseBoolConverter}}" HeightRequest="40"/>
@@ -65,6 +59,17 @@
                                                 <RoundRectangle CornerRadius="5"/>
                                             </Border.StrokeShape>
                                             <VerticalStackLayout Spacing="12">
+                                                <Grid ColumnDefinitions="*, Auto" Padding="0, 0, 0, 10">
+                                                    <Label Text="Set as Default Model" 
+                                                           FontAttributes="Bold" 
+                                                           TextColor="White"
+                                                           VerticalOptions="Center"/>
+                                                    <Switch Grid.Column="1" 
+                                                            IsToggled="{Binding IsDefault, Mode=TwoWay}"
+                                                            Toggled="DefaultModelSwitch_Toggled"
+                                                            BindingContext="{Binding .}"/>
+                                                </Grid>
+
                                                 <Label Text="Custom Model Parameters (Optional)" FontAttributes="Bold" TextColor="White"/>
 
                                                 <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto" VerticalOptions="Center" RowSpacing="8" ColumnSpacing="10">

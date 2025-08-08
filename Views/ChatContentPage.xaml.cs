@@ -1,3 +1,4 @@
+// C:\MYWORLD\Projects\LoQA\LoQA\Views\ChatContentPage.xaml.cs
 using LoQA.Services;
 using System.ComponentModel;
 
@@ -37,6 +38,7 @@ namespace LoQA.Views
                 case nameof(EasyChatService.LastErrorMessage):
                 case nameof(EasyChatService.IsGenerating):
                 case nameof(EasyChatService.IsHistoryLoadPending):
+                case nameof(EasyChatService.IsModelLoaded):
                     MainThread.BeginInvokeOnMainThread(UpdateStatusLabel);
                     break;
             }
@@ -44,11 +46,15 @@ namespace LoQA.Views
 
         private void UpdateStatusLabel()
         {
-            if (_chatService.IsGenerating)
+            if (_chatService.ShowHistoryNeedsModelPanel)
+            {
+                StatusLabel.Text = $"Previewing: {_chatService.CurrentConversation?.Name}";
+            }
+            else if (_chatService.IsGenerating)
             {
                 StatusLabel.Text = "Generating...";
             }
-            else if (_chatService.IsHistoryLoadPending)
+            else if (_chatService.ShowLoadHistoryPanel)
             {
                 StatusLabel.Text = "Previewing history. Click below to load.";
             }
@@ -58,9 +64,9 @@ namespace LoQA.Views
                 var chatName = _chatService.CurrentConversation?.Name ?? "New Chat";
                 StatusLabel.Text = $"{chatName} ({modelName})";
             }
-            else if (_chatService.CurrentEngineState == EngineState.UNINITIALIZED)
+            else if (_chatService.ShowInitialPromptPanel)
             {
-                StatusLabel.Text = "No model loaded. Go to Models page.";
+                StatusLabel.Text = "No Model Loaded";
             }
             else if (_chatService.CurrentEngineState == EngineState.IN_ERROR)
             {
@@ -88,6 +94,39 @@ namespace LoQA.Views
         private async void LoadHistoryButton_Clicked(object sender, EventArgs e)
         {
             await _chatService.LoadPendingHistoryIntoEngineAsync();
+        }
+
+        private async void NavigateToModelsButton_Clicked(object sender, EventArgs e)
+        {
+            await Shell.Current.GoToAsync(nameof(ModelsPage));
+        }
+
+        private async void LoadDefaultButton_Clicked(object sender, EventArgs e)
+        {
+            if (sender is not Button button) return;
+
+            button.IsEnabled = false;
+            button.Text = "Checking...";
+
+            var result = await _chatService.LoadDefaultModelAsync();
+
+            switch (result)
+            {
+                case DefaultModelLoadResult.Success:
+                    // UI will update automatically, no message needed.
+                    break;
+
+                case DefaultModelLoadResult.NoDefaultModelSet:
+                    await DisplayAlert("Info", "No default model has been set. Please go to the Models page to choose one.", "OK");
+                    break;
+
+                case DefaultModelLoadResult.FailedToLoad:
+                    await DisplayAlert("Error", $"Failed to load the default model. Please check its settings. Error: {_chatService.LastErrorMessage}", "OK");
+                    break;
+            }
+
+            button.IsEnabled = true;
+            button.Text = "Load Default Model";
         }
     }
 }
