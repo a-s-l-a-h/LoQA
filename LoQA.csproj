@@ -21,7 +21,7 @@
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
-		<ApplicationTitle>Lō-QA</ApplicationTitle>
+		<ApplicationTitle>LoQA</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.companyname.lqa</ApplicationId>
@@ -42,11 +42,20 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- App Icon -->
+		<!-- App Icon 
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
-
-		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		-->
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#121212" />
+		<!-- Splash Screen 
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" /> -->
+		<!-- 
+       =========================================================================
+       === THIS IS THE LINE YOU NEED TO CHANGE                                 ===
+       =========================================================================
+    -->
+		<!-- OPTION 1: Fit to screen maintaining aspect ratio -->
+		<MauiSplashScreen Include="Resources\Splash\splash_logo.svg" Color="#121212" BaseSize="400,300" Resize="true" />
+	
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />

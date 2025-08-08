@@ -1,50 +1,42 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- FIX: Added xmlns:services for DataType -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
-             xmlns:services="clr-namespace:LoQA.Services"
              x:Class="LoQA.Views.ChatContentPage"
-             Title="EasyChat"
-             BackgroundColor="{StaticResource PageBackgroundColor}"
-             x:DataType="services:EasyChatService">
+             Title="LoQA"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
 
     <NavigationPage.TitleView>
         <Label x:Name="StatusLabel" TextColor="{StaticResource SecondaryTextColor}" VerticalTextAlignment="Center" HorizontalTextAlignment="Center"/>
     </NavigationPage.TitleView>
 
     <Grid RowDefinitions="*, Auto" Padding="10" ColumnSpacing="10">
+        <CollectionView Grid.Row="0" x:Name="ChatMessagesView" Margin="5,0" ItemsSource="{Binding CurrentMessages}" ItemsUpdatingScrollMode="KeepLastItemInView">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:ChatMessageViewModel">
+                    <Grid Padding="5,10">
+                        <Border BackgroundColor="{Binding BackgroundColor}"
+                                Padding="15,10"
+                                StrokeThickness="0"
+                                MaximumWidthRequest="300"
+                                HorizontalOptions="{Binding HorizontalAlignment}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="15"/>
+                            </Border.StrokeShape>
+                            <Label Text="{Binding Content}" TextColor="{Binding TextColor}" LineBreakMode="WordWrap"/>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
 
         <!-- 
            =========================================================================
-           === FIX: The CollectionView is now wrapped in a Grid. The Padding is  ===
-           === applied to this new Grid, which is the correct way to do it.      ===
+           === FIX: Removed IsEnabled="{Binding CanUserInput}" from this Grid.     ===
+           === This allows the container to remain enabled so the Stop button    ===
+           === can receive click events.                                         ===
            =========================================================================
         -->
-        <Grid Grid.Row="0" Padding="30,0">
-            <CollectionView x:Name="ChatMessagesView" Margin="5,0" 
-                            ItemsSource="{Binding CurrentMessages}" 
-                            ItemsUpdatingScrollMode="KeepLastItemInView">
-
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:ChatMessageViewModel">
-                        <Grid Padding="5,10">
-                            <Border BackgroundColor="{Binding BackgroundColor}"
-                                    Padding="15,10"
-                                    StrokeThickness="0"
-                                    MaximumWidthRequest="300"
-                                    HorizontalOptions="{Binding HorizontalAlignment}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="15"/>
-                                </Border.StrokeShape>
-                                <Label Text="{Binding Content}" TextColor="{Binding TextColor}" LineBreakMode="WordWrap"/>
-                            </Border>
-                        </Grid>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </Grid>
-
         <Grid Grid.Row="1" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="5,10,0,0" 
               IsVisible="{Binding IsHistoryLoadPending, Converter={StaticResource InverseBoolConverter}}"
               x:Name="InputGrid">
