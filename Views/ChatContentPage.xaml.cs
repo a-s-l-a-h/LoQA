@@ -124,7 +124,7 @@ namespace LoQA.Views
                     await DisplayAlert("Error", $"Failed to load the default model. Please check its settings. Error: {_chatService.LastErrorMessage}", "OK");
                     break;
             }
-
+            
             button.IsEnabled = true;
             button.Text = "Load Default Model";
         }

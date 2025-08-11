@@ -10,17 +10,18 @@
         <Label x:Name="StatusLabel" TextColor="{StaticResource SecondaryTextColor}" VerticalTextAlignment="Center" HorizontalTextAlignment="Center"/>
     </NavigationPage.TitleView>
 
-    <Grid RowDefinitions="*, Auto" Padding="10" ColumnSpacing="10">
+    <!-- Direct Grid layout without outer margins -->
+    <Grid RowDefinitions="*, Auto" ColumnSpacing="0" RowSpacing="0">
 
-        <!-- Message Display Area (always visible if there are messages) -->
-        <CollectionView Grid.Row="0" x:Name="ChatMessagesView" Margin="5,0" ItemsSource="{Binding CurrentMessages}" ItemsUpdatingScrollMode="KeepLastItemInView">
+        <!-- Message Display Area -->
+        <CollectionView Grid.Row="0" x:Name="ChatMessagesView" Margin="20,10" ItemsSource="{Binding CurrentMessages}" ItemsUpdatingScrollMode="KeepLastItemInView">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:ChatMessageViewModel">
                     <Grid Padding="5,10">
                         <Border BackgroundColor="{Binding BackgroundColor}"
                                 Padding="15,10"
                                 StrokeThickness="0"
-                                MaximumWidthRequest="300"
+                                MaximumWidthRequest="10000"
                                 HorizontalOptions="{Binding HorizontalAlignment}">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="15"/>
@@ -48,12 +49,10 @@
                    TextColor="{StaticResource SecondaryTextColor}"/>
         </VerticalStackLayout>
 
-
-        <!-- Container for all bottom panels -->
-        <Grid Grid.Row="1" Margin="5,10,0,0">
+        <!-- Container for all bottom panels - Full width with proper margins -->
+        <Grid Grid.Row="1" Margin="20,10,20,20">
 
             <!-- Panel 1: Initial State / No Model Loaded -->
-            <!-- FIX: Changed to HorizontalStackLayout for side-by-side buttons -->
             <HorizontalStackLayout Spacing="15"
                                  HorizontalOptions="Center"
                                  IsVisible="{Binding ShowInitialPromptPanel}">
@@ -66,10 +65,9 @@
                         Clicked="NavigateToModelsButton_Clicked"/>
             </HorizontalStackLayout>
 
-            <!-- Panel 2: Normal Chat Input -->
+            <!-- Panel 2: Normal Chat Input - Full width -->
             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10"
                   IsVisible="{Binding ShowInputPanel}">
-                <!-- FIX 2: Added BackgroundColor to ensure text is visible on Android -->
                 <Editor Grid.Column="0" x:Name="PromptEditor" 
                         Placeholder="Enter your prompt here..." AutoSize="TextChanges" 
                         TextColor="{StaticResource PrimaryTextColor}" PlaceholderColor="{StaticResource SecondaryTextColor}"
@@ -87,7 +85,6 @@
                     IsVisible="{Binding ShowLoadHistoryPanel}"/>
 
             <!-- Panel 4: History Preview WITHOUT Model Loaded -->
-            <!-- FIX: Changed to HorizontalStackLayout for side-by-side buttons -->
             <VerticalStackLayout Spacing="15" IsVisible="{Binding ShowHistoryNeedsModelPanel}">
                 <Label Text="Load a model to continue this conversation."
                        HorizontalTextAlignment="Center"
@@ -103,7 +100,6 @@
         </Grid>
 
         <!-- Global Activity Indicator -->
-        <!-- FIX 1: Changed binding to the new ShowGlobalSpinner property -->
         <ActivityIndicator Grid.Row="0" Grid.RowSpan="2" HorizontalOptions="Center" VerticalOptions="Center" Color="{StaticResource PrimaryAccentColor}"
                              IsVisible="{Binding ShowGlobalSpinner}"
                              IsRunning="{Binding ShowGlobalSpinner}" />
