@@ -93,7 +93,18 @@ namespace LoQA.Views
 
         private async void LoadHistoryButton_Clicked(object sender, EventArgs e)
         {
-            await _chatService.LoadPendingHistoryIntoEngineAsync();
+            // MODIFIED: Added confirmation popup with "Continue" and "New Chat" options
+            string message = "In the current implementation, this process takes time. While it’s running, the chat area will be busy, and you won’t be able to start a new chat immediately.";
+            bool continueWithHistory = await DisplayAlert("Load History?", message, "Continue", "New Chat");
+
+            if (continueWithHistory)
+            {
+                await _chatService.LoadPendingHistoryIntoEngineAsync();
+            }
+            else
+            {
+                _chatService.StartNewConversation();
+            }
         }
 
         private async void NavigateToModelsButton_Clicked(object sender, EventArgs e)
@@ -103,6 +114,7 @@ namespace LoQA.Views
 
         private async void LoadDefaultButton_Clicked(object sender, EventArgs e)
         {
+            // MODIFIED: Added specific popup for when no default model is set.
             if (sender is not Button button) return;
 
             button.IsEnabled = false;
@@ -113,20 +125,25 @@ namespace LoQA.Views
             switch (result)
             {
                 case DefaultModelLoadResult.Success:
-                    // UI will update automatically, no message needed.
+                    // UI will update automatically via bindings, no message needed.
                     break;
 
                 case DefaultModelLoadResult.NoDefaultModelSet:
-                    await DisplayAlert("Info", "No default model has been set. Please go to the Models page to choose one.", "OK");
+                    // New popup with a direct button to the models page.
+                    bool goToModels = await DisplayAlert("No Default Model", "There is no default model set. Would you like to go to the Models page to choose one?", "Choose Model", "Cancel");
+                    if (goToModels)
+                    {
+                        await Shell.Current.GoToAsync(nameof(ModelsPage));
+                    }
                     break;
 
                 case DefaultModelLoadResult.FailedToLoad:
                     await DisplayAlert("Error", $"Failed to load the default model. Please check its settings. Error: {_chatService.LastErrorMessage}", "OK");
                     break;
             }
-            
+
             button.IsEnabled = true;
-            button.Text = "Load Default Model";
+            button.Text = "Load";
         }
     }
 }

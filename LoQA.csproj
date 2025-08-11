@@ -55,7 +55,7 @@
     -->
 		<!-- OPTION 1: Fit to screen maintaining aspect ratio -->
 		<MauiSplashScreen Include="Resources\Splash\splash_logo.svg" Color="#121212" BaseSize="400,300" Resize="true" />
-	
+
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -223,31 +223,31 @@
 	<!-- ===================================================================== -->
 
 	<ItemGroup>
-	  <MauiXaml Update="Views\ChatContentPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\ModelsPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\SettingsPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\Sidebar.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
+		<MauiXaml Update="Views\ChatContentPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Views\ModelsPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Views\SettingsPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Views\Sidebar.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Platforms\Windows\libs\x64\" />
+		<Folder Include="Platforms\Windows\libs\x64\" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Compile Update="Views\ChatContentPage.xaml.cs">
-	    <DependentUpon>ChatContentPage.xaml</DependentUpon>
-	  </Compile>
-	  <Compile Update="Views\Sidebar.xaml.cs">
-	    <DependentUpon>Sidebar.xaml</DependentUpon>
-	  </Compile>
+		<Compile Update="Views\ChatContentPage.xaml.cs">
+			<DependentUpon>ChatContentPage.xaml</DependentUpon>
+		</Compile>
+		<Compile Update="Views\Sidebar.xaml.cs">
+			<DependentUpon>Sidebar.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 
@@ -260,11 +260,11 @@
 		<EnableLongPath>true</EnableLongPath>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
-	  <PublishTrimmed>False</PublishTrimmed>
+		<PublishTrimmed>False</PublishTrimmed>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
-	  <PublishTrimmed>True</PublishTrimmed>
-	  <RunAOTCompilation>True</RunAOTCompilation>
+		<PublishTrimmed>True</PublishTrimmed>
+		<RunAOTCompilation>True</RunAOTCompilation>
 	</PropertyGroup>
 
 	<!-- ===================================================================== -->

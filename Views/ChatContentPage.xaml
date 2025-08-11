@@ -39,30 +39,25 @@
                              HorizontalOptions="Center" 
                              Spacing="20"
                              IsVisible="{Binding ShowInitialPromptPanel}">
-            <Label Text="No Model Initialized"
-                   FontSize="Large"
-                   FontAttributes="Bold"
-                   HorizontalTextAlignment="Center"
-                   TextColor="{StaticResource PrimaryTextColor}"/>
-            <Label Text="Please select a model to begin chatting."
-                   HorizontalTextAlignment="Center"
-                   TextColor="{StaticResource SecondaryTextColor}"/>
+
+            <!-- MODIFIED: "Load Default" button is now here, centered, and smaller -->
+            <Button x:Name="LoadDefaultButton"
+                    Text="Load"
+                    Clicked="LoadDefaultButton_Clicked"
+                    WidthRequest="200"
+                    FontSize="Small"
+                    Margin="0,10,0,0"/>
         </VerticalStackLayout>
 
         <!-- Container for all bottom panels - Full width with proper margins -->
         <Grid Grid.Row="1" Margin="20,10,20,20">
 
             <!-- Panel 1: Initial State / No Model Loaded -->
+            <!-- MODIFICATION: This panel is now empty as its buttons have been moved. -->
             <HorizontalStackLayout Spacing="15"
                                  HorizontalOptions="Center"
                                  IsVisible="{Binding ShowInitialPromptPanel}">
-
-                <Button x:Name="LoadDefaultButton"
-                        Text="Load Default Model"
-                        Clicked="LoadDefaultButton_Clicked"/>
-                <Button x:Name="NavigateToModelsButton"
-                        Text="Choose a Model"
-                        Clicked="NavigateToModelsButton_Clicked"/>
+                <!-- The buttons were moved to the VerticalStackLayout above -->
             </HorizontalStackLayout>
 
             <!-- Panel 2: Normal Chat Input - Full width -->
@@ -92,7 +87,7 @@
                 <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
                     <Button Text="Choose a Model"
                             Clicked="NavigateToModelsButton_Clicked"/>
-                    <Button Text="Load Default Model"
+                    <Button Text="Load"
                             Clicked="LoadDefaultButton_Clicked"/>
                 </HorizontalStackLayout>
             </VerticalStackLayout>
