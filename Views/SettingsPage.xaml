@@ -4,6 +4,7 @@
              x:Class="LoQA.Views.SettingsPage"
              Title="Settings"
              BackgroundColor="{StaticResource PageBackgroundColor}">
+    <!--
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="25">
 
@@ -13,7 +14,7 @@
                    VerticalOptions="Center" 
                    HorizontalOptions="Center" />
 
-            <!-- ADDED: This entire section for the new setting -->
+            
             <Border Stroke="{StaticResource PrimaryAccentColor}" StrokeThickness="1" Padding="15" Margin="0,20,0,0">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="10"/>
@@ -32,7 +33,7 @@
                             Toggled="CopyOptionSwitch_Toggled"/>
                 </Grid>
             </Border>
-            <!-- End of added section -->
+            
 
 
             <Label Text="This page is a placeholder for future application settings."
@@ -41,5 +42,5 @@
                    Margin="0,50,0,0" />
 
         </VerticalStackLayout>
-    </ScrollView>
+    </ScrollView>-->
 </ContentPage>

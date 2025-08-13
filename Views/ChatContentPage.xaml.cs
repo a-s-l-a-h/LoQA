@@ -191,7 +191,7 @@ namespace LoQA.Views
             }
 
             button.IsEnabled = true;
-            button.Text = "Load";
+            button.Text = "Load Model";
         }
         #endregion
     }

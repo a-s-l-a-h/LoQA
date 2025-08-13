@@ -96,9 +96,9 @@
             <VerticalStackLayout Spacing="15"
                                  HorizontalOptions="Center"
                                  IsVisible="{Binding ShowHistoryNeedsModelPanel}">
-                <Label Text="Load a model to continue this conversation."
+                <!-- <Label Text="Load a model to continue this conversation."
                        HorizontalTextAlignment="Center"
-                       TextColor="{StaticResource SecondaryTextColor}"/>
+                       TextColor="{StaticResource SecondaryTextColor}"/> -->
                 <Button Text="Load Model"
                         Clicked="LoadDefaultButton_Clicked"
                         Style="{StaticResource LoadButtonStyle}"/>
