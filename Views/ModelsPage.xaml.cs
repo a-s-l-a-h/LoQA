@@ -1,4 +1,3 @@
-// C:\MYWORLD\Projects\LoQA\LoQA\Views\ModelsPage.xaml.cs
 using LoQA.Models;
 using LoQA.Services;
 using System.Collections.ObjectModel;
@@ -230,7 +229,7 @@ namespace LoQA.Views
                     new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
                         { DevicePlatform.WinUI, new[] { ".gguf" } },
-                        { DevicePlatform.Android, new[] { "application/octet-stream", "*/*" } },
+                        { DevicePlatform.Android, new[] { "application/octet-stream" } },
                         { DevicePlatform.iOS, new[] { "public.data" } },
                         { DevicePlatform.MacCatalyst, new[] { "gguf" } },
                     });

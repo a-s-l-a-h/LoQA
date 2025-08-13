@@ -1,4 +1,3 @@
-// C:\MYWORLD\Projects\LoQA\LoQA\Views\Sidebar.xaml.cs
 using LoQA.Models;
 using LoQA.Services;
 using System.ComponentModel;

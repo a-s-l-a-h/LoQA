@@ -1,4 +1,3 @@
-// C:\MYWORLD\Projects\LoQA\LoQA\Views\ChatContentPage.xaml.cs
 using LoQA.Services;
 using System.ComponentModel;
 // ADD: These using statements are now needed

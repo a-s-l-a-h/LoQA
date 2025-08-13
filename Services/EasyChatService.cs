@@ -1,5 +1,4 @@
-﻿// C:\MYWORLD\Projects\LoQA\LoQA\Services\EasyChatService.cs
-using LoQA.Models;
+﻿using LoQA.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

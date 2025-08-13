@@ -1,6 +1,4 @@
-﻿// LoQA/Services/IEasyChatWrapper.cs
-
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 

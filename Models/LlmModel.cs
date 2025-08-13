@@ -1,5 +1,4 @@
-﻿// C:\MYWORLD\Projects\LoQA\LoQA\Models\LlmModel.cs
-using SQLite;
+﻿using SQLite;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 

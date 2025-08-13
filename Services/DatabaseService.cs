@@ -1,5 +1,4 @@
-﻿// C:\MYWORLD\Projects\LoQA\LoQA\Services\DatabaseService.cs
-using LoQA.Models;
+﻿using LoQA.Models;
 using SQLite;
 using System.Collections.Generic;
 using System.Diagnostics;

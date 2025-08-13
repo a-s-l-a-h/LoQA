@@ -1,5 +1,4 @@
-﻿// C:\MYWORLD\Projects\LoQA\LoQA\App.xaml.cs
-using LoQA.Services;
+﻿using LoQA.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 
