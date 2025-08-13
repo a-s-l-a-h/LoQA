@@ -64,10 +64,10 @@ namespace LoQA.Views
                     // Get the text and copy to clipboard
                     await Clipboard.Default.SetTextAsync(messageViewModel.Content);
 
-                    // Optional: Give the user feedback
+                    /*
                     tappedLabel.Text = "? Copied!";
                     await Task.Delay(1500); // Wait 1.5 seconds
-                    tappedLabel.Text = "? Copy";
+                    tappedLabel.Text = "? Copy";*/
                 }
             }
         }

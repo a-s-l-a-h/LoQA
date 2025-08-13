@@ -48,10 +48,9 @@
                             <Label Text="❐"
                                    TextColor="{StaticResource SecondaryTextColor}"
                                    FontSize="12"
-                                   Padding="10,0" Margin="0,0,0,0" HeightRequest="30"
+                                   Padding="10,0" Margin="0,0,0,0" HeightRequest="15"
                                    VerticalTextAlignment="Center"
-                                   HorizontalOptions="Start"
-                                   IsVisible="{Binding Path=IsCopyVisible, Source={RelativeSource AncestorType={x:Type local:ChatContentPage}}}">
+                                   HorizontalOptions="Start">
                                 <Label.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="CopyLabel_Tapped" />
                                 </Label.GestureRecognizers>
@@ -106,9 +105,9 @@
                     IsVisible="{Binding ShowLoadHistoryPanel}"/>
 
             <VerticalStackLayout Spacing="15" IsVisible="{Binding ShowHistoryNeedsModelPanel}">
-                <Label Text="Load a model to continue this conversation."
+                <!-- <Label Text="Load a model to continue this conversation."
                        HorizontalTextAlignment="Center"
-                       TextColor="{StaticResource SecondaryTextColor}"/>
+                       TextColor="{StaticResource SecondaryTextColor}"/> -->
                 <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
                     <Button Text="Load"
                             Clicked="LoadDefaultButton_Clicked"/>
