@@ -21,7 +21,7 @@
                         <Border BackgroundColor="{Binding BackgroundColor}"
                                 Padding="15,10"
                                 StrokeThickness="0"
-                                MaximumWidthRequest="10000"
+                                MaximumWidthRequest="900"
                                 HorizontalOptions="{Binding HorizontalAlignment}">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="15"/>
@@ -85,8 +85,8 @@
                        HorizontalTextAlignment="Center"
                        TextColor="{StaticResource SecondaryTextColor}"/>
                 <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
-                    <Button Text="Choose a Model"
-                            Clicked="NavigateToModelsButton_Clicked"/>
+                    <!--    <Button Text="Choose a Model"
+                            Clicked="NavigateToModelsButton_Clicked"/> -->
                     <Button Text="Load"
                             Clicked="LoadDefaultButton_Clicked"/>
                 </HorizontalStackLayout>
