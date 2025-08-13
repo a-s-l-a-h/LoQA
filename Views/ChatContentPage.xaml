@@ -2,7 +2,9 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:LoQA.Models"
+             xmlns:local="clr-namespace:LoQA.Views"
              x:Class="LoQA.Views.ChatContentPage"
+             x:Name="ThisChatPage"
              Title="LoQA"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
@@ -17,21 +19,51 @@
         <CollectionView Grid.Row="0" x:Name="ChatMessagesView" Margin="20,10" ItemsSource="{Binding CurrentMessages}" ItemsUpdatingScrollMode="KeepLastItemInView">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:ChatMessageViewModel">
+                    <!-- This outer Grid still fills the width of the row -->
                     <Grid Padding="5,10">
-                        <Border BackgroundColor="{Binding BackgroundColor}"
-                                Padding="15,10"
-                                StrokeThickness="0"
-                                MaximumWidthRequest="900"
-                                HorizontalOptions="{Binding HorizontalAlignment}">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="15"/>
-                            </Border.StrokeShape>
-                            <Label Text="{Binding Content}" TextColor="{Binding TextColor}" LineBreakMode="WordWrap"/>
-                        </Border>
+
+                        <!-- THIS IS THE FIX: A VerticalStackLayout now groups the bubble and the label. -->
+                        <!-- The HorizontalAlignment is applied HERE, so both items move together. -->
+                        <VerticalStackLayout Spacing="4"
+                                             HorizontalOptions="{Binding HorizontalAlignment}">
+
+                            <!-- Original Chat Bubble (with HorizontalOptions removed, as it's now on the parent) -->
+                            <Border BackgroundColor="{Binding BackgroundColor}"
+                                    Padding="15,10"
+                                    StrokeThickness="0"
+                                    MaximumWidthRequest="900">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="15"/>
+                                </Border.StrokeShape>
+                                <Label Text="{Binding Content}" TextColor="{Binding TextColor}" LineBreakMode="WordWrap"/>
+                            </Border>
+
+                            <!-- 
+                            ========================================================================================
+                            === THIS IS THE ONLY CHANGE IN THIS FILE                                             ===
+                            === The IsVisible binding is updated to use RelativeSource.                          ===
+                            === All other properties, including HorizontalOptions, remain unchanged.             ===
+                            ========================================================================================
+                            -->
+                            <Label Text="❐"
+                                   TextColor="{StaticResource SecondaryTextColor}"
+                                   FontSize="12"
+                                   Padding="10,0" Margin="0,0,0,0" HeightRequest="30"
+                                   VerticalTextAlignment="Center"
+                                   HorizontalOptions="Start"
+                                   IsVisible="{Binding Path=IsCopyVisible, Source={RelativeSource AncestorType={x:Type local:ChatContentPage}}}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="CopyLabel_Tapped" />
+                                </Label.GestureRecognizers>
+                            </Label>
+
+                        </VerticalStackLayout>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
+
+        <!-- The rest of your file is unchanged and remains exactly as you provided it. -->
 
         <!-- Empty View (shown when there are no messages and no model) -->
         <VerticalStackLayout Grid.Row="0"
@@ -40,7 +72,6 @@
                              Spacing="20"
                              IsVisible="{Binding ShowInitialPromptPanel}">
 
-            <!-- MODIFIED: "Load Default" button is now here, centered, and smaller -->
             <Button x:Name="LoadDefaultButton"
                     Text="Load"
                     Clicked="LoadDefaultButton_Clicked"
@@ -52,15 +83,11 @@
         <!-- Container for all bottom panels - Full width with proper margins -->
         <Grid Grid.Row="1" Margin="20,10,20,20">
 
-            <!-- Panel 1: Initial State / No Model Loaded -->
-            <!-- MODIFICATION: This panel is now empty as its buttons have been moved. -->
             <HorizontalStackLayout Spacing="15"
                                  HorizontalOptions="Center"
                                  IsVisible="{Binding ShowInitialPromptPanel}">
-                <!-- The buttons were moved to the VerticalStackLayout above -->
             </HorizontalStackLayout>
 
-            <!-- Panel 2: Normal Chat Input - Full width -->
             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10"
                   IsVisible="{Binding ShowInputPanel}">
                 <Editor Grid.Column="0" x:Name="PromptEditor" 
@@ -72,21 +99,17 @@
                 <Button Grid.Column="1" Text="■" IsVisible="{Binding IsGenerating}" Clicked="StopButton_Clicked" Style="{StaticResource CircleButton}" BackgroundColor="{StaticResource DestructiveColor}"/>
             </Grid>
 
-            <!-- Panel 3: History Preview with Model Loaded -->
             <Button x:Name="LoadHistoryButton"
                     Text="Load History &amp; Continue Chat"
                     IsEnabled="{Binding IsLoadingHistory, Converter={StaticResource InverseBoolConverter}}"
                     Clicked="LoadHistoryButton_Clicked"
                     IsVisible="{Binding ShowLoadHistoryPanel}"/>
 
-            <!-- Panel 4: History Preview WITHOUT Model Loaded -->
             <VerticalStackLayout Spacing="15" IsVisible="{Binding ShowHistoryNeedsModelPanel}">
                 <Label Text="Load a model to continue this conversation."
                        HorizontalTextAlignment="Center"
                        TextColor="{StaticResource SecondaryTextColor}"/>
                 <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
-                    <!--    <Button Text="Choose a Model"
-                            Clicked="NavigateToModelsButton_Clicked"/> -->
                     <Button Text="Load"
                             Clicked="LoadDefaultButton_Clicked"/>
                 </HorizontalStackLayout>

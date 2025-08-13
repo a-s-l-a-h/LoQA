@@ -13,7 +13,27 @@
                    VerticalOptions="Center" 
                    HorizontalOptions="Center" />
 
-            <!-- The fallback template editor has been removed -->
+            <!-- ADDED: This entire section for the new setting -->
+            <Border Stroke="{StaticResource PrimaryAccentColor}" StrokeThickness="1" Padding="15" Margin="0,20,0,0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="10"/>
+                </Border.StrokeShape>
+                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Chat Features"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource PrimaryTextColor}"/>
+                        <Label Text="Show 'Copy' button on chat messages."
+                               TextColor="{StaticResource SecondaryTextColor}"
+                               FontSize="Small"/>
+                    </VerticalStackLayout>
+                    <Switch x:Name="CopyOptionSwitch"
+                            Grid.Column="1"
+                            Toggled="CopyOptionSwitch_Toggled"/>
+                </Grid>
+            </Border>
+            <!-- End of added section -->
+
 
             <Label Text="This page is a placeholder for future application settings."
                    VerticalOptions="Center" 
