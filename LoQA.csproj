@@ -21,13 +21,13 @@
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
-		<ApplicationTitle>LoQA</ApplicationTitle>
+		<ApplicationTitle>LoQA Alpha</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.ozebot.loqa</ApplicationId>
+		<ApplicationId>com.ozebot.loqa_alpha</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationDisplayVersion>0.73</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
@@ -261,6 +261,7 @@
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
 		<PublishTrimmed>False</PublishTrimmed>
+		<AndroidKeyStore>False</AndroidKeyStore>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
 		<PublishTrimmed>True</PublishTrimmed>
@@ -276,8 +277,15 @@
 		<!-- ACTION: ADD/MODIFY THESE LINES -->
 		<DebugSymbols>true</DebugSymbols>
 		<DebugType>portable</DebugType>
+		<AndroidKeyStore>False</AndroidKeyStore>
+		<AndroidPackageFormat>apk</AndroidPackageFormat>
 
 	</PropertyGroup>
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RuntimeIdentifiers>android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
+	</PropertyGroup>
+
+
 
 
 </Project>
