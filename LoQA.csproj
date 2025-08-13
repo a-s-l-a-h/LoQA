@@ -24,7 +24,7 @@
 		<ApplicationTitle>LoQA</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.lqa</ApplicationId>
+		<ApplicationId>com.ozebot.loqa</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
