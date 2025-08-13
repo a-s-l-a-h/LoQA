@@ -8,26 +8,33 @@
              Title="LoQA"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- ACTION: Button dimensions and font size have been made much smaller. -->
+            <Style x:Key="LoadButtonStyle" TargetType="Button">
+                <Setter Property="WidthRequest" Value="120" />
+                <Setter Property="HeightRequest" Value="34" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryAccentColor}" />
+                <Setter Property="CornerRadius" Value="17" />
+                <Setter Property="FontSize" Value="12" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <NavigationPage.TitleView>
         <Label x:Name="StatusLabel" TextColor="{StaticResource SecondaryTextColor}" VerticalTextAlignment="Center" HorizontalTextAlignment="Center"/>
     </NavigationPage.TitleView>
 
-    <!-- Direct Grid layout without outer margins -->
     <Grid RowDefinitions="*, Auto" ColumnSpacing="0" RowSpacing="0">
 
-        <!-- Message Display Area -->
+        <!-- Message Display Area (Unchanged) -->
         <CollectionView Grid.Row="0" x:Name="ChatMessagesView" Margin="20,10" ItemsSource="{Binding CurrentMessages}" ItemsUpdatingScrollMode="KeepLastItemInView">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:ChatMessageViewModel">
-                    <!-- This outer Grid still fills the width of the row -->
                     <Grid Padding="5,10">
-
-                        <!-- THIS IS THE FIX: A VerticalStackLayout now groups the bubble and the label. -->
-                        <!-- The HorizontalAlignment is applied HERE, so both items move together. -->
                         <VerticalStackLayout Spacing="4"
                                              HorizontalOptions="{Binding HorizontalAlignment}">
-
-                            <!-- Original Chat Bubble (with HorizontalOptions removed, as it's now on the parent) -->
                             <Border BackgroundColor="{Binding BackgroundColor}"
                                     Padding="15,10"
                                     StrokeThickness="0"
@@ -37,14 +44,6 @@
                                 </Border.StrokeShape>
                                 <Label Text="{Binding Content}" TextColor="{Binding TextColor}" LineBreakMode="WordWrap"/>
                             </Border>
-
-                            <!-- 
-                            ========================================================================================
-                            === THIS IS THE ONLY CHANGE IN THIS FILE                                             ===
-                            === The IsVisible binding is updated to use RelativeSource.                          ===
-                            === All other properties, including HorizontalOptions, remain unchanged.             ===
-                            ========================================================================================
-                            -->
                             <Label Text="❐"
                                    TextColor="{StaticResource SecondaryTextColor}"
                                    FontSize="12"
@@ -55,36 +54,21 @@
                                     <TapGestureRecognizer Tapped="CopyLabel_Tapped" />
                                 </Label.GestureRecognizers>
                             </Label>
-
                         </VerticalStackLayout>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- The rest of your file is unchanged and remains exactly as you provided it. -->
-
-        <!-- Empty View (shown when there are no messages and no model) -->
-        <VerticalStackLayout Grid.Row="0"
-                             VerticalOptions="Center" 
-                             HorizontalOptions="Center" 
-                             Spacing="20"
-                             IsVisible="{Binding ShowInitialPromptPanel}">
-
-            <Button x:Name="LoadDefaultButton"
-                    Text="Load"
-                    Clicked="LoadDefaultButton_Clicked"
-                    WidthRequest="200"
-                    FontSize="Small"
-                    Margin="0,10,0,0"/>
-        </VerticalStackLayout>
-
-        <!-- Container for all bottom panels - Full width with proper margins -->
+        <!-- Container for all bottom panels (Structure is the same, styles are applied) -->
         <Grid Grid.Row="1" Margin="20,10,20,20">
 
-            <HorizontalStackLayout Spacing="15"
-                                 HorizontalOptions="Center"
-                                 IsVisible="{Binding ShowInitialPromptPanel}">
+            <HorizontalStackLayout HorizontalOptions="Center"
+                                   IsVisible="{Binding ShowInitialPromptPanel}">
+                <Button x:Name="LoadDefaultButton"
+                        Text="Load Model"
+                        Clicked="LoadDefaultButton_Clicked"
+                        Style="{StaticResource LoadButtonStyle}"/>
             </HorizontalStackLayout>
 
             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10"
@@ -98,25 +82,31 @@
                 <Button Grid.Column="1" Text="■" IsVisible="{Binding IsGenerating}" Clicked="StopButton_Clicked" Style="{StaticResource CircleButton}" BackgroundColor="{StaticResource DestructiveColor}"/>
             </Grid>
 
-            <Button x:Name="LoadHistoryButton"
-                    Text="Load History &amp; Continue Chat"
-                    IsEnabled="{Binding IsLoadingHistory, Converter={StaticResource InverseBoolConverter}}"
-                    Clicked="LoadHistoryButton_Clicked"
-                    IsVisible="{Binding ShowLoadHistoryPanel}"/>
+            <HorizontalStackLayout HorizontalOptions="Center"
+                                   IsVisible="{Binding ShowLoadHistoryPanel}">
+                <!-- ACTION: The width for this specific button is also reduced to match the smaller style. -->
+                <Button x:Name="LoadHistoryButton"
+                        Text="Load History &amp; Continue Chat"
+                        IsEnabled="{Binding IsLoadingHistory, Converter={StaticResource InverseBoolConverter}}"
+                        Clicked="LoadHistoryButton_Clicked"
+                        Style="{StaticResource LoadButtonStyle}"
+                        WidthRequest="220" />
+            </HorizontalStackLayout>
 
-            <VerticalStackLayout Spacing="15" IsVisible="{Binding ShowHistoryNeedsModelPanel}">
-                <!-- <Label Text="Load a model to continue this conversation."
+            <VerticalStackLayout Spacing="15"
+                                 HorizontalOptions="Center"
+                                 IsVisible="{Binding ShowHistoryNeedsModelPanel}">
+                <Label Text="Load a model to continue this conversation."
                        HorizontalTextAlignment="Center"
-                       TextColor="{StaticResource SecondaryTextColor}"/> -->
-                <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
-                    <Button Text="Load"
-                            Clicked="LoadDefaultButton_Clicked"/>
-                </HorizontalStackLayout>
+                       TextColor="{StaticResource SecondaryTextColor}"/>
+                <Button Text="Load Model"
+                        Clicked="LoadDefaultButton_Clicked"
+                        Style="{StaticResource LoadButtonStyle}"/>
             </VerticalStackLayout>
 
         </Grid>
 
-        <!-- Global Activity Indicator -->
+        <!-- Global Activity Indicator (Unchanged) -->
         <ActivityIndicator Grid.Row="0" Grid.RowSpan="2" HorizontalOptions="Center" VerticalOptions="Center" Color="{StaticResource PrimaryAccentColor}"
                              IsVisible="{Binding ShowGlobalSpinner}"
                              IsRunning="{Binding ShowGlobalSpinner}" />
