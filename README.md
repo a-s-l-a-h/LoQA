@@ -1,4 +1,4 @@
-﻿# LoQA (Local Question Answer)
+﻿﻿# LoQA (Local Question Answer)
 
 LoQA is a simple, offline, cross-platform AI chat application.
 
@@ -24,7 +24,14 @@ See LoQA in action on both Windows and Android.
 <details>
   <summary><strong>Watch Demo on Windows</strong></summary>
   <br>
-  <video src="docs/LoQA_Windows.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
+  <video src="https://github.com/user-attachments/assets/234e5126-021c-484d-bf7d-3721afef832a" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
+
+
+
+
+
+
+
     Your browser does not support the video tag.
   </video>
 </details>
@@ -32,7 +39,7 @@ See LoQA in action on both Windows and Android.
 <details>
   <summary><strong>Watch Demo on Android</strong></summary>
   <br>
-  <video src="docs/LoQA_Android.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
+  <video src="https://github.com/user-attachments/assets/cf4d82fd-8694-4eae-9acd-daf6dd6dab4c" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
     Your browser does not support the video tag.
   </video>
 </details>
