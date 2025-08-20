@@ -1,148 +1,60 @@
-﻿# .NET MAUI .gitignore file
-# This file is based on the standard Visual Studio and .NET templates.
+﻿# =============================
+# .NET MAUI / Visual Studio GitIgnore
+# Clean, minimal, and future-proof
+# =============================
 
-# --- Visual Studio ---
-# Ignore the .vs folder, which contains user-specific solution settings like
-# open documents, window layouts, and breakpoints.
+# --- IDE / User Specific ---
 .vs/
-fullcode/
-
-# User-specific settings files
+.idea/
+.vscode/
 *.suo
 *.user
 *.sln.dotsettings
+*.sln.iml
 
-# --- .NET & MAUI Build Artifacts ---
-# Ignore the main build output folders. These are regenerated on every build.
+# --- Build Artifacts ---
 [Bb]in/
 [Oo]bj/
+backup/
+fullcode/
 
-# --- Other Generated Files & Caches ---
-# Log files
+# --- Native / Binary Output ---
+*.dll
+*.so
+*.dylib
+*.a
+*.exe
+
+# --- NuGet ---
+*.nupkg
+*.snupkg
+/packages/
+
+# --- Logs / Test Results ---
 *.log
 *.tlog
-
-# Test results
 *.trx
 *.coverage
 *.coveragexml
 
-# NuGet packages folder (for older project styles)
-/packages
+# --- Publish Output ---
+[Pp]ublish/
+[Pp]ublish[Oo]utput/
 
-# NuGet package Symbol files
-*.nupkg
-*.snupkg
-
-# --- OS-generated files ---
+# --- OS Specific ---
 # macOS
 .DS_Store
 .AppleDouble
 ._*
-
 # Windows
 Thumbs.db
 desktop.ini
-
 # Linux
 *~
 
-# --- IDE-specific files (optional, but good practice) ---
-# Rider
-.idea/
-*.sln.iml
-
-# VS Code
-.vscode/
-
-# --- Publish Folders ---
-# Ignore publish output folders, which can be configured in the .csproj
-[Pp]ublish/
-[Pp]ublish[Oo]utput/
-
-# Ignore all .gguf files
-*.gguf
-
+# --- Sensitive Files ---
 *.keystore
-
-*.so
-*.dll
-*.js
-*.html
-*.css
-**/dist/
-**/lib/
-**/libs/
-**/assets/
-**/dists/
-**/asset/
+*.gguf
 *.dat
 *.pat
 *.patt
-**/images/
-**/image/
-**/markers/
-# .NET MAUI .gitignore file
-# This file is based on the standard Visual Studio and .NET templates.
-
-# --- Visual Studio ---
-# Ignore the .vs folder, which contains user-specific solution settings like
-# open documents, window layouts, and breakpoints.
-.vs/
-backup/
-
-# User-specific settings files
-*.suo
-*.user
-*.sln.dotsettings
-
-# --- .NET & MAUI Build Artifacts ---
-# Ignore the main build output folders. These are regenerated on every build.
-[Bb]in/
-[Oo]bj/
-
-**/*.so
-**/*.dll
-
-# --- Other Generated Files & Caches ---
-# Log files
-*.log
-*.tlog
-
-# Test results
-*.trx
-*.coverage
-*.coveragexml
-
-# NuGet packages folder (for older project styles)
-/packages
-
-# NuGet package Symbol files
-*.nupkg
-*.snupkg
-
-# --- OS-generated files ---
-# macOS
-.DS_Store
-.AppleDouble
-._*
-
-# Windows
-Thumbs.db
-desktop.ini
-
-# Linux
-*~
-
-# --- IDE-specific files (optional, but good practice) ---
-# Rider
-.idea/
-*.sln.iml
-
-# VS Code
-.vscode/
-
-# --- Publish Folders ---
-# Ignore publish output folders, which can be configured in the .csproj
-[Pp]ublish/
-[Pp]ublish[Oo]utput/
