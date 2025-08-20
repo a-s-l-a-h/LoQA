@@ -1,124 +1,189 @@
-﻿﻿# LoQA (Local Question Answer)
+# <div align="center">
+  <svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="2" dy="2" stdDeviation="2" flood-color="rgba(255,255,255,0.3)" />
+      </filter>
+    </defs>
+    <rect width="100%" height="100%" fill="#1a1a1a"/>
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+          font-family="Arial, sans-serif" font-size="48" font-weight="bold"
+          fill="white" filter="url(#textShadow)">
+      LoQA
+    </text>
+  </svg>
+  
+  **Local Question Answer**
+  
+  *A simple, offline, cross-platform AI chat application*
 
-LoQA is a simple, offline, cross-platform AI chat application.
-
-### Philosophy
-
-The core philosophy of LoQA is to provide a straightforward, accessible chat experience that works seamlessly across both desktop and mobile devices.
-
-*   **Local First:** All models and conversations are stored and processed on your device. No internet connection is required for chatting.
-*   **Cross-Platform:** A single codebase delivers a native experience on both Windows and Android.
-*   **Accessibility:** Designed to run efficiently on standard consumer hardware, from your PC to your phone.
-
-### Built With
-
-*   **.NET MAUI:** For the cross-platform user interface and application logic.
-*   **EasyChatEngine:** A custom C++ wrapper that simplifies `llama.cpp` into a clean, task-based C API, making it easy to call from .NET using P/Invoke.
-*   **llama.cpp:** As the core inference engine for running GGUF models efficiently.
----
-
-### Demo
-
-See LoQA in action on both Windows and Android.
-
-<details>
-  <summary><strong>Watch Demo on Windows</strong></summary>
-  <br>
-  <video src="https://github.com/user-attachments/assets/234e5126-021c-484d-bf7d-3721afef832a" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
-
-
-
-
-
-
-
-    Your browser does not support the video tag.
-  </video>
-</details>
-
-<details>
-  <summary><strong>Watch Demo on Android</strong></summary>
-  <br>
-  <video src="https://github.com/user-attachments/assets/cf4d82fd-8694-4eae-9acd-daf6dd6dab4c" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
-    Your browser does not support the video tag.
-  </video>
-</details>
-
+</div>
 
 ---
 
-### Features
+## 🎯 Philosophy
 
-*   **llama.cpp Powered:** Supports a wide range of GGUF models, giving you the flexibility to choose the size and capability you need.
-*   **Offline:** Your chats and models are processed locally.
-*   **Cross-Platform:** Works on Windows and Android.
-*   **Model Management:** Easily add GGUF files, configure settings, and switch between models.
-*   **Conversation History:** Chats are automatically saved to a local database.
-*   **Parameter Control:** Adjust sampling parameters like temperature on the fly.
-*   **Advanced Settings:** Customize model-specific parameters like context size (CTX) and GPU layers.
+LoQA is built on three core principles that make AI accessible to everyone:
 
----
+> **🏠 Local First** • All models and conversations are stored and processed on your device. No internet connection required for chatting.
 
-### Build Instructions
+> **🌐 Cross-Platform** • A single codebase delivers a native experience on both Windows and Android.
 
-LoQA requires a native backend to function. You must build this component first.
-
-#### Step 1: Build the Native Engine (`easychatengine`)
-
-The core inference is handled by `easychatengine`, a C++ wrapper around llama.cpp.
-
-1.  Clone the engine's repository:
-    ```bash
-    git clone https://github.com/a-s-l-a-h/easychatengine.git
-    ```
-2.  Follow the build instructions in **that repository's README** to compile the native libraries for your target platforms (Windows and Android).
-
-#### Step 2: Place the Compiled Binaries
-
-After building, copy the resulting library files into the correct folders within this LoQA project:
-
-*   **For Windows (x64):**
-    Copy all `.dll` files (`easychatengine.dll`, `llama.dll`, etc.) to:
-    ```
-    LoQA/Platforms/Windows/libs/x64/
-    ```
-
-*   **For Android (arm64-v8a):**
-    Copy all `.so` files (`libeasychatengine.so`, `libllama.so`, etc.) to:
-    ```
-    LoQA/Platforms/Android/libs/arm64-v8a/
-    ```
-
-#### Step 3: Build the LoQA App
-
-With the native libraries in place, you can now build the .NET MAUI application.
-
-1.  **Prerequisites:**
-    *   .NET 9 SDK or later.
-    *   Visual Studio 2022 with the ".NET Multi-platform App UI development" workload.
-
-2.  **Build:**
-    *   Open `LoQA.sln` in Visual Studio.
-    *   Select your target (e.g., "Windows Machine" or an Android device).
-    *   Build and run the project.
+> **♿ Accessibility** • Designed to run efficiently on standard consumer hardware, from your PC to your phone.
 
 ---
 
-### How to Use
+## 🚀 See LoQA in Action
 
-1.  **Download a Model:** First, download a compatible GGUF model to your local device. You can find a wide variety of text-generation models on the [Hugging Face Hub](https://huggingface.co/models?pipeline_tag=text-generation&library=gguf&apps=llama.cpp&sort=trending).
-2.  **Launch LoQA:** Start the application.
-3.  **Add the Model:** Open the sidebar, navigate to the **Models** page, and click **+ Add Model**. Select the GGUF file you just downloaded from your local storage.
-4.  **Load the Model:** Once the model appears in the list, click its **Load** button.
-5.  **Start Chatting:** After the model loads successfully, click **+ New Chat** in the sidebar to begin your conversation.
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <h3>📱 Android Demo</h3>
+      <video src="https://github.com/user-attachments/assets/6ba8d4dc-4665-4ce0-8831-3dd1cd168759" 
+             controls muted autoplay loop style="max-width:100%; border-radius: 8px;">
+        Your browser does not support the video tag.
+      </video>
+    </td>
+    <td align="center" width="50%">
+      <h3>💻 Windows Demo</h3>
+      <video src="https://github.com/user-attachments/assets/6d5cb8dc-3a2f-4e30-9c1f-7921dba416f8" 
+             controls muted autoplay loop style="max-width:100%; border-radius: 8px;">
+        Your browser does not support the video tag.
+      </video>
+    </td>
+  </tr>
+</table>
 
 ---
 
-### Project Structure Overview
+## ⚡ Features
 
-*   **Services:** Contains the core application logic.
-    *   `EasyChatEngine.cs`: The C# wrapper that calls the native llama.cpp backend.
-    *   `EasyChatService.cs`: Manages the application state, model loading, and chat logic.
-    *   `DatabaseService.cs`: Handles the local SQLite database for conversations and models.
-*   **Views:** Contains the UI pages and controls (`ChatContentPage.xaml`, `ModelsPage.xaml`, etc.).
-*   **Platforms:** Contains platform-specific code and the native libraries you placed during the build steps.
+<div align="center">
+
+| Feature | Description |
+|---------|-------------|
+| **🦙 llama.cpp Powered** | Supports a wide range of GGUF models with flexible size and capability options |
+| **🔒 Offline Operation** | Your chats and models are processed entirely locally |
+| **📱💻 Cross-Platform** | Seamless experience on Windows and Android |
+| **🔧 Model Management** | Easy GGUF file addition, configuration, and model switching |
+| **💾 Conversation History** | Automatic chat saving to local SQLite database |
+| **🎛️ Parameter Control** | Real-time adjustment of sampling parameters like temperature |
+| **⚙️ Advanced Settings** | Customize context size (CTX) and GPU layer allocation |
+
+</div>
+
+---
+
+## 🏗️ Built With
+
+<div align="center">
+
+```mermaid
+graph TD
+    A[LoQA App] --> B[.NET MAUI]
+    A --> C[EasyChatEngine]
+    C --> D[llama.cpp]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+```
+
+</div>
+
+- **🎨 .NET MAUI** - Cross-platform UI framework
+- **⚡ EasyChatEngine** - Custom C++ wrapper for simplified llama.cpp integration
+- **🚀 llama.cpp** - High-performance GGUF model inference engine
+
+---
+
+## 🛠️ Build Instructions
+
+### Prerequisites
+
+- 📦 .NET 9 SDK or later
+- 🎯 Visual Studio 2022 with ".NET Multi-platform App UI development" workload
+
+### Step 1: Build the Native Engine
+
+```bash
+# Clone the engine repository
+git clone https://github.com/a-s-l-a-h/easychatengine.git
+
+# Follow the build instructions in that repository's README
+# to compile native libraries for your target platforms
+```
+
+### Step 2: Place Compiled Binaries
+
+Copy the resulting library files to the correct platform folders:
+
+#### Windows (x64)
+```
+LoQA/Platforms/Windows/libs/x64/
+├── easychatengine.dll
+├── llama.dll
+└── ... (other .dll files)
+```
+
+#### Android (arm64-v8a)
+```
+LoQA/Platforms/Android/libs/arm64-v8a/
+├── libeasychatengine.so
+├── libllama.so
+└── ... (other .so files)
+```
+
+### Step 3: Build LoQA
+
+1. Open `LoQA.sln` in Visual Studio 2022
+2. Select your target platform (Windows Machine or Android device)
+3. Build and run the project
+
+---
+
+## 📖 Quick Start Guide
+
+<div align="center">
+
+### 🎯 Get Started in 5 Easy Steps
+
+</div>
+
+| Step | Action | Details |
+|------|--------|---------|
+| **1️⃣** | **Download Model** | Get a GGUF model from [Hugging Face Hub](https://huggingface.co/models?pipeline_tag=text-generation&library=gguf&apps=llama.cpp&sort=trending) |
+| **2️⃣** | **Launch LoQA** | Start the application on your device |
+| **3️⃣** | **Add Model** | Sidebar → **Models** → **+ Add Model** → Select your GGUF file |
+| **4️⃣** | **Load Model** | Click the **Load** button next to your model |
+| **5️⃣** | **Start Chatting** | Click **+ New Chat** and begin your conversation! |
+
+---
+
+## 📁 Project Architecture
+
+<div align="center">
+
+```
+LoQA/
+├── 🔧 Services/
+│   ├── EasyChatEngine.cs     # C# wrapper for native backend
+│   ├── EasyChatService.cs    # Application state & chat logic
+│   └── DatabaseService.cs    # SQLite database management
+├── 🎨 Views/
+│   ├── ChatContentPage.xaml  # Main chat interface
+│   ├── ModelsPage.xaml       # Model management UI
+│   └── ...                   # Other UI components
+└── 📱 Platforms/
+    ├── Windows/libs/x64/     # Windows native libraries
+    └── Android/libs/arm64-v8a/ # Android native libraries
+```
+
+</div>
+
+---
+
+
+
+</div>
