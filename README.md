@@ -81,9 +81,9 @@ LoQA is built on three core principles that make AI accessible to everyone:
 
 ```mermaid
 graph TD
-    A[LoQA App] --> B[.NET MAUI]
-    A --> C[EasyChatEngine]
-    C --> D[llama.cpp]
+    B[.NET MAUI] --> A[LoQA App]
+    C[EasyChatEngine] --> A[LoQA App]
+    D[llama.cpp] --> C[EasyChatEngine]
     
     style A fill:#e1f5fe
     style B fill:#f3e5f5
