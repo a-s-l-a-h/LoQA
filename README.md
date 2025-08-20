@@ -21,8 +21,22 @@ The core philosophy of LoQA is to provide a straightforward, accessible chat exp
 
 See LoQA in action on both Windows and Android.
 
-*   **On Windows:** [Link to Windows Demo Video](docs/LoQA_Windows.mp4)
-*   **On Android:** [Link to Android Demo Video](docs/LoQA_Android.mp4)
+<details>
+  <summary><strong>Watch Demo on Windows</strong></summary>
+  <br>
+  <video src="docs/LoQA_on_windows.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
+    Your browser does not support the video tag.
+  </video>
+</details>
+
+<details>
+  <summary><strong>Watch Demo on Android</strong></summary>
+  <br>
+  <video src="docs/LoQA_on_android.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
+    Your browser does not support the video tag.
+  </video>
+</details>
+
 
 ---
 
@@ -95,9 +109,9 @@ With the native libraries in place, you can now build the .NET MAUI application.
 
 ### Project Structure Overview
 
-*   **/Services:** Contains the core application logic.
+*   **Services:** Contains the core application logic.
     *   `EasyChatEngine.cs`: The C# wrapper that calls the native llama.cpp backend.
     *   `EasyChatService.cs`: Manages the application state, model loading, and chat logic.
     *   `DatabaseService.cs`: Handles the local SQLite database for conversations and models.
-*   **/Views:** Contains the UI pages and controls (`ChatContentPage.xaml`, `ModelsPage.xaml`, etc.).
-*   **/Platforms:** Contains platform-specific code and the native libraries you placed during the build steps.
+*   **Views:** Contains the UI pages and controls (`ChatContentPage.xaml`, `ModelsPage.xaml`, etc.).
+*   **Platforms:** Contains platform-specific code and the native libraries you placed during the build steps.
