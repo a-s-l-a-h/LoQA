@@ -24,7 +24,7 @@ See LoQA in action on both Windows and Android.
 <details>
   <summary><strong>Watch Demo on Windows</strong></summary>
   <br>
-  <video src="docs/LoQA_on_windows.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
+  <video src="docs/LoQA_Windows.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
     Your browser does not support the video tag.
   </video>
 </details>
@@ -32,7 +32,7 @@ See LoQA in action on both Windows and Android.
 <details>
   <summary><strong>Watch Demo on Android</strong></summary>
   <br>
-  <video src="docs/LoQA_on_android.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
+  <video src="docs/LoQA_Android.mp4" controls="controls" muted="muted" autoplay="autoplay" loop="loop" style="max-width:100%;">
     Your browser does not support the video tag.
   </video>
 </details>
